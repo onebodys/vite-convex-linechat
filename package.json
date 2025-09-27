@@ -1,14 +1,15 @@
 {
   "name": "vite-convex-linechat",
   "private": true,
-  "version": "0.0.0",
+  "version": "0.1.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "biome lint .",
     "format": "biome format --write .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "knip": "knip"
   },
   "dependencies": {
     "convex": "^1.27.3",
@@ -17,9 +18,12 @@
   },
   "devDependencies": {
     "@biomejs/biome": "^2.2.4",
+    "@types/node": "^24.5.2",
     "@types/react": "^19.1.13",
     "@types/react-dom": "^19.1.9",
     "@vitejs/plugin-react": "^5.0.3",
+    "knip": "^5.64.1",
+    "lefthook": "^1.13.4",
     "typescript": "~5.8.3",
     "vite": "npm:rolldown-vite@7.1.12"
   },
