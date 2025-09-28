@@ -3,7 +3,7 @@
 ## ツールとプロジェクト構成
 - [x] Convex CLIとクライアントパッケージをインストールし、Convexのプロジェクト構造（スキーマ、関数、`.env`の雛形）を用意する
   - [x] `npx convex init` ではなく `npx convex dev --once --configure=new`
-- [ ] Tailwind CSSとshadcn/uiを導入し、`tailwind.config.js`、PostCSS、グローバルスタイル、shadcnジェネレーターを設定する
+- [x] Tailwind CSSとshadcn/uiを導入し、`tailwind.config.js`、PostCSS、グローバルスタイル、shadcnジェネレーターを設定する
 - [ ] LINEのグリーンを意識したカラーパレットを再現するデザイントークン（プライマリ/セカンダリカラー、グラデーション、ダークモード）を定義する
 - [ ] 必要な環境変数（`CONVEX_DEPLOYMENT`、LINEチャネルのシークレット、Webhook URL）を整理してドキュメント化する
 
