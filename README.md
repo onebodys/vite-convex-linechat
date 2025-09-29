@@ -71,3 +71,7 @@ export default defineConfig([
   },
 ])
 ```
+
+## クライアント画面のデザイン例
+
+<https://v0.app/chat/chat-app-design-fiwwBfpx5jI>
