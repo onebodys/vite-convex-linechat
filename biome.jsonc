@@ -14,5 +14,12 @@
   },
   "javascript": {
     "globals": ["document", "window"]
+  },
+  "assist": {
+    "actions": {
+      "source": {
+        "organizeImports": "on"
+      }
+    }
   }
 }
