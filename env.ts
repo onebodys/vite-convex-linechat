@@ -1,29 +1,17 @@
-/**
- * 必須の環境変数チェック
- */
-const requiredKeys = ["LINE_CHANNEL_SECRET", "LINE_CHANNEL_ACCESS_TOKEN"] as const;
+import { z } from "zod/v4";
 
-type RequiredKey = (typeof requiredKeys)[number];
+const envSchema = z.looseObject({
+  LINE_CHANNEL_SECRET: z.string().min(1, { error: "LINE_CHANNEL_SECRET must be defined" }),
+  LINE_CHANNEL_ACCESS_TOKEN: z
+    .string()
+    .min(1, { error: "LINE_CHANNEL_ACCESS_TOKEN must be defined" }),
+});
 
-type EnvShape = Record<RequiredKey, string>;
+const parsedEnv = envSchema.safeParse(process.env);
 
-const missingKeys: RequiredKey[] = [];
-const envValues: Partial<EnvShape> = {};
-
-for (const key of requiredKeys) {
-  const value = process.env[key];
-  if (!value) {
-    missingKeys.push(key);
-    continue;
-  }
-  envValues[key] = value;
+if (!parsedEnv.success) {
+  const issues = parsedEnv.error.issues.map((issue) => issue.message).join("\n - ");
+  throw new Error(`Invalid environment variables:\n - ${issues}`);
 }
 
-if (missingKeys.length > 0) {
-  throw new Error(
-    `Missing environment variables: ${missingKeys.join(", ")}. ` +
-      "Please set them before starting the Convex functions.",
-  );
-}
-
-export const env = envValues as EnvShape;
+export const env = parsedEnv.data;
