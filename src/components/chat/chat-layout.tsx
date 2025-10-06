@@ -1,3 +1,4 @@
+import { useQuery } from "convex/react";
 import {
   BadgeCheck,
   Filter,
@@ -11,16 +12,86 @@ import {
   Smile,
   Video,
 } from "lucide-react";
+import { useMemo } from "react";
+import { z } from "zod/v4";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { api } from "../../../convex/_generated/api";
+import { type LineUserSummary, lineUserSummarySchema } from "../../../shared/line-user";
 import {
   type Contact,
   channels,
-  contacts,
   type Message,
+  contacts as mockContacts,
   quickReplies,
   timeline,
 } from "./mock-data";
+
+function formatTimestamp(timestamp: number | null | undefined) {
+  if (!timestamp) {
+    return "";
+  }
+
+  const date = new Date(timestamp);
+  const now = new Date();
+  const sameDay =
+    date.getFullYear() === now.getFullYear() &&
+    date.getMonth() === now.getMonth() &&
+    date.getDate() === now.getDate();
+
+  if (sameDay) {
+    return date.toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit" });
+  }
+
+  const msInDay = 24 * 60 * 60 * 1000;
+  const diffDays = Math.floor((now.getTime() - date.getTime()) / msInDay);
+
+  if (diffDays < 7) {
+    return date.toLocaleDateString("ja-JP", { weekday: "short" });
+  }
+
+  return date.toLocaleDateString("ja-JP", { month: "numeric", day: "numeric" });
+}
+
+function mapLineUserToContact(user: LineUserSummary): Contact {
+  const name = user.displayName ?? "LINE ユーザー";
+  const handle = user.lineUserId ? `@${user.lineUserId}` : "";
+  const avatarSeed = encodeURIComponent(user.displayName ?? user.lineUserId ?? "line-user");
+  const avatar =
+    user.pictureUrl ?? `https://api.dicebear.com/7.x/initials/svg?radius=50&seed=${avatarSeed}`;
+
+  const tags: string[] = [];
+  if (user.relationshipStatus === "following") {
+    tags.push("フォロー中");
+  } else if (user.relationshipStatus === "blocked") {
+    tags.push("ブロック中");
+  }
+
+  if (user.channelMode === "standby") {
+    tags.push("standby");
+  }
+
+  if (user.lastEventType) {
+    tags.push(user.lastEventType);
+  }
+
+  const lastMessage =
+    user.statusMessage ??
+    (user.lastEventType ? `最終イベント: ${user.lastEventType}` : "メッセージ履歴はありません");
+
+  return {
+    id: user.lineUserId,
+    name,
+    handle,
+    avatar,
+    status: lastMessage,
+    lastMessage,
+    lastMessageAt: formatTimestamp(user.lastEventAt ?? user.updatedAt ?? null),
+    channel: "line",
+    tags: tags.length ? tags : undefined,
+    pinned: false,
+  };
+}
 
 function ChannelPill({ label, active = false }: { label: string; active?: boolean }) {
   return (
@@ -185,6 +256,37 @@ function MessageBubble({ message }: { message: Message }) {
 }
 
 export function ChatLayout() {
+  const lineContacts = useQuery(api.line.users.list, { limit: 50, includeBlocked: false });
+
+  const validatedLineUsers = useMemo(() => {
+    if (!lineContacts) {
+      return undefined;
+    }
+
+    const valid: LineUserSummary[] = [];
+
+    for (const entry of lineContacts) {
+      const result = lineUserSummarySchema.safeParse(entry);
+      if (result.success) {
+        valid.push(result.data);
+      } else {
+        console.warn("Invalid LINE user entry", z.treeifyError(result.error));
+      }
+    }
+
+    return valid;
+  }, [lineContacts]);
+
+  const derivedContacts = useMemo(() => {
+    if (!validatedLineUsers) {
+      return undefined;
+    }
+    return validatedLineUsers.map(mapLineUserToContact);
+  }, [validatedLineUsers]);
+
+  const contactList = derivedContacts ?? (lineContacts === undefined ? mockContacts : []);
+  const isLoadingContacts = lineContacts === undefined;
+
   return (
     <div className="flex min-h-svh flex-col bg-gradient-to-br from-slate-100 via-white to-slate-200">
       <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-6 p-6">
@@ -237,9 +339,17 @@ export function ChatLayout() {
               </div>
 
               <div className="flex-1 space-y-3 overflow-y-auto pr-1">
-                {contacts.map((contact, index) => (
-                  <ContactRow key={contact.id} contact={contact} active={index === 0} />
-                ))}
+                {isLoadingContacts ? (
+                  <p className="px-2 text-sm text-muted-foreground">ユーザーを読み込み中です…</p>
+                ) : contactList.length === 0 ? (
+                  <p className="px-2 text-sm text-muted-foreground">
+                    表示できる LINE ユーザーがまだいません。
+                  </p>
+                ) : (
+                  contactList.map((contact, index) => (
+                    <ContactRow key={contact.id} contact={contact} active={index === 0} />
+                  ))
+                )}
               </div>
             </aside>
 

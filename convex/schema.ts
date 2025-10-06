@@ -62,5 +62,6 @@ export default defineSchema({
     updatedAt: v.number(),
   })
     .index("byLineUserId", ["lineUserId"])
-    .index("byRelationshipStatus", ["relationshipStatus"]),
+    .index("byRelationshipStatus", ["relationshipStatus"])
+    .index("byUpdatedAt", ["updatedAt"]),
 });
