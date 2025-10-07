@@ -113,12 +113,6 @@ export const timeline: Message[] = [
   },
 ];
 
-export const quickReplies = [
-  "いつもありがとうございます！",
-  "詳細を確認して再度ご連絡します。",
-  "担当者へ共有しますので少々お待ちください。",
-];
-
 export const channels = [
   { id: "all", label: "全て" },
   { id: "unread", label: "未読" },
