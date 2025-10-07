@@ -16,8 +16,8 @@
 
 ## LINE Messaging API連携
 - [ ] LINE Messaging APIクライアントヘルパー（HTTPラッパー、エラーハンドリング、リトライ/バックオフ）を整備する
-- [ ] LINEのWebhookから受信したイベントを処理するConvexのHTTPアクションエンドポイントを公開する
-- [ ] WebhookのペイロードをConvexのストレージに保存し、UI更新をトリガーする
+- [x] LINEのWebhookから受信したイベントを処理するConvexのHTTPアクションエンドポイントを公開する
+- [x] WebhookのペイロードをConvexのストレージに保存し、UI更新をトリガーする
 - [x] LINEからのリクエストに対する署名検証とセキュリティを確認する
 
 ## Reactフロントエンド（Vite + shadcn/ui）
