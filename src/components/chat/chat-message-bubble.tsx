@@ -14,7 +14,7 @@ export function ChatMessageBubble({ message }: { message: Message }) {
         {isAgent ? "OP" : "GU"}
       </div>
       <div
-        className={cn("max-w-[70%] space-y-2", isAgent && "items-end text-right")}
+        className={cn("max-w-[70%] space-y-2", isAgent && "items-end text-left")}
         data-side={isAgent ? "agent" : "customer"}
       >
         <div
