@@ -1,26 +1,57 @@
+import { useAction } from "convex/react";
 import { Plus, Settings } from "lucide-react";
+import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { api } from "../../../convex/_generated/api";
 import { ChatSidebar } from "./chat-sidebar";
 import { ConversationHeader } from "./conversation-header";
 import { ConversationTimeline } from "./conversation-timeline";
 import { useLineContacts } from "./hooks/use-line-contacts";
+import { useLineMessages } from "./hooks/use-line-messages";
 import { MessageComposer } from "./message-composer";
-import { channels, contacts as mockContacts, timeline } from "./mock-data";
+import { channels } from "./mock-data";
 
 export function ChatLayout() {
   const { contacts, isLoading } = useLineContacts();
-  const sidebarContacts = contacts ?? [];
-  const activeContact = contacts === undefined ? mockContacts[0] : contacts[0];
-  const isEmptyState = contacts !== undefined && contacts.length === 0;
+  const [selectedContactId, setSelectedContactId] = useState<string | null>(null);
+  const contactList = contacts ?? [];
 
-  const displayContact = activeContact ?? mockContacts[0];
-  const subtitleChannel =
-    displayContact.channel === "line"
-      ? "LINE"
-      : displayContact.channel === "email"
-        ? "メール"
-        : "SNS";
-  const subtitle = `${subtitleChannel} ・ ${displayContact.lastMessageAt ?? "---"}`;
+  const activeContactId = useMemo(() => {
+    if (contactList.length === 0) {
+      return null;
+    }
+    if (selectedContactId && contactList.some((contact) => contact.id === selectedContactId)) {
+      return selectedContactId;
+    }
+    return contactList[0]?.id ?? null;
+  }, [contactList, selectedContactId]);
+
+  const activeContact = contactList.find((contact) => contact.id === activeContactId) ?? null;
+
+  const isEmptyState = !isLoading && contactList.length === 0;
+  const { messages, isLoading: isLoadingMessages } = useLineMessages(activeContactId);
+
+  const sendTextMessage = useAction(api.line.actions.sendTextMessage);
+  const [isSending, setIsSending] = useState(false);
+
+  const handleSendMessage = async (text: string) => {
+    if (!activeContactId || text.trim().length === 0) {
+      return;
+    }
+    setIsSending(true);
+    try {
+      await sendTextMessage({ lineUserId: activeContactId, text });
+    } catch (error) {
+      console.error("Failed to send message", error);
+      // TODO: surface error to UI (toast/snackbar) if needed
+    } finally {
+      setIsSending(false);
+    }
+  };
+
+  const subtitle = activeContact
+    ? `${activeContact.channel === "line" ? "LINE" : activeContact.channel === "email" ? "メール" : "SNS"} ・ ${activeContact.lastMessageAt ?? "---"}`
+    : "";
 
   return (
     <div className="flex min-h-svh flex-col bg-gradient-to-br from-slate-100 via-white to-slate-200">
@@ -47,27 +78,34 @@ export function ChatLayout() {
 
           <div className="grid flex-1 gap-6 lg:grid-cols-[360px_minmax(0,1fr)]">
             <ChatSidebar
-              contacts={sidebarContacts}
+              contacts={contactList}
               isLoading={isLoading}
               channels={channels}
-              activeContactId={activeContact.id}
+              activeContactId={activeContactId ?? undefined}
+              onSelectContact={(contact) => setSelectedContactId(contact.id)}
             />
 
             <section className="flex flex-1 flex-col overflow-hidden rounded-3xl border border-border/60 bg-white/90 shadow-xl">
               {isEmptyState ? (
                 <EmptyConversationState />
+              ) : !activeContactId || !activeContact ? (
+                <LoadingConversationState />
               ) : (
                 <>
                   <ConversationHeader
-                    title={displayContact.name}
+                    title={activeContact.name}
                     subtitle={subtitle}
-                    badgeLabel={displayContact.tags?.[0]}
+                    badgeLabel={activeContact.tags?.[0]}
                   />
 
-                  <ConversationTimeline messages={timeline} />
+                  <ConversationTimeline messages={messages} isLoading={isLoadingMessages} />
 
                   <div className="border-t border-border/70 bg-muted/40 px-6 py-4">
-                    <MessageComposer />
+                    <MessageComposer
+                      onSend={handleSendMessage}
+                      disabled={!activeContactId}
+                      isSubmitting={isSending}
+                    />
                   </div>
                 </>
               )}
@@ -89,6 +127,14 @@ function EmptyConversationState() {
         現在表示できる LINE
         ユーザーがいません。新しいフォローイベントを受信すると、ここに会話が表示されます。
       </p>
+    </div>
+  );
+}
+
+function LoadingConversationState() {
+  return (
+    <div className="flex flex-1 items-center justify-center px-6 py-12 text-sm text-muted-foreground">
+      会話を読み込み中です…
     </div>
   );
 }

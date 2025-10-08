@@ -3,7 +3,9 @@
 import { HTTPFetchError, messagingApi, validateSignature } from "@line/bot-sdk";
 import { v } from "convex/values";
 import { env } from "../../env";
-import { internalAction } from "../_generated/server";
+import { internal } from "../_generated/api";
+import type { Id } from "../_generated/dataModel";
+import { action, internalAction } from "../_generated/server";
 
 const { MessagingApiClient } = messagingApi;
 
@@ -64,6 +66,60 @@ export const fetchUserProfile = internalAction({
         status: 500,
         error: error instanceof Error ? error.message : "Unknown error",
       };
+    }
+  },
+});
+
+type SendTextMessageResult = { success: true; messageId: Id<"messages"> };
+
+export const sendTextMessage = action({
+  args: {
+    lineUserId: v.string(),
+    text: v.string(),
+  },
+  handler: async (ctx, { lineUserId, text }): Promise<SendTextMessageResult> => {
+    const client = getMessagingClient();
+    const timestamp = Date.now();
+
+    const messageId: Id<"messages"> = await ctx.runMutation(
+      internal.line.messages.createOutgoingTextMessage,
+      {
+        lineUserId,
+        text,
+        timestamp,
+      },
+    );
+
+    try {
+      await client.pushMessage({
+        to: lineUserId,
+        messages: [{ type: "text", text }],
+      });
+
+      await ctx.runMutation(internal.line.messages.updateMessageStatus, {
+        messageId,
+        status: "sent",
+      });
+
+      return {
+        success: true,
+        messageId,
+      };
+    } catch (error) {
+      let errorMessage: string | undefined;
+      if (error instanceof HTTPFetchError) {
+        errorMessage = error.body;
+      } else if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+
+      await ctx.runMutation(internal.line.messages.updateMessageStatus, {
+        messageId,
+        status: "failed",
+        errorMessage,
+      });
+
+      throw error;
     }
   },
 });

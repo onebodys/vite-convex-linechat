@@ -7,6 +7,8 @@ export type MessageComposerProps = {
   onAttachFile?: () => void;
   onInsertTemplate?: () => void;
   onToggleEmoji?: () => void;
+  disabled?: boolean;
+  isSubmitting?: boolean;
 };
 
 export function MessageComposer({
@@ -14,9 +16,14 @@ export function MessageComposer({
   onAttachFile,
   onInsertTemplate,
   onToggleEmoji,
+  disabled = false,
+  isSubmitting = false,
 }: MessageComposerProps) {
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (disabled || isSubmitting) {
+      return;
+    }
     const formData = new FormData(event.currentTarget);
     const message = (formData.get("message") as string) ?? "";
     if (message.trim().length === 0) {
@@ -38,6 +45,7 @@ export function MessageComposer({
           size="icon"
           className="rounded-2xl"
           onClick={onAttachFile}
+          disabled={disabled || isSubmitting}
         >
           <Paperclip className="size-5" />
           <span className="sr-only">ファイル添付</span>
@@ -48,6 +56,7 @@ export function MessageComposer({
           size="icon"
           className="rounded-2xl"
           onClick={onToggleEmoji}
+          disabled={disabled || isSubmitting}
         >
           <Smile className="size-5" />
           <span className="sr-only">スタンプ</span>
@@ -59,6 +68,7 @@ export function MessageComposer({
           name="message"
           className="min-h-[96px] w-full resize-none rounded-2xl border border-border/60 bg-muted/40 px-4 py-3 text-sm text-foreground shadow-inner outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/40"
           placeholder="メッセージを入力..."
+          disabled={disabled}
         />
         <div className="flex items-center justify-between text-xs text-muted-foreground">
           <span>外部公開メッセージ</span>
@@ -72,12 +82,13 @@ export function MessageComposer({
           size="icon"
           className="rounded-2xl"
           onClick={onInsertTemplate}
+          disabled={disabled || isSubmitting}
         >
           <Plus className="size-5" />
           <span className="sr-only">テンプレートを挿入</span>
         </Button>
-        <Button type="submit" className="rounded-2xl px-5">
-          送信
+        <Button type="submit" className="rounded-2xl px-5" disabled={disabled || isSubmitting}>
+          {isSubmitting ? "送信中" : "送信"}
           <Send className="ml-2 size-4" />
         </Button>
       </div>

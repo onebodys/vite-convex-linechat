@@ -1,17 +1,37 @@
+import type { Doc } from "../../../convex/_generated/dataModel";
 import { ChatMessageBubble } from "./chat-message-bubble";
-import type { Message } from "./mock-data";
 
-export function ConversationTimeline({ messages }: { messages: Message[] }) {
+export function ConversationTimeline({
+  messages,
+  isLoading,
+}: {
+  messages: Doc<"messages">[];
+  isLoading?: boolean;
+}) {
+  if (isLoading) {
+    return (
+      <div className="flex-1 overflow-y-auto px-6 py-6 text-sm text-muted-foreground">
+        メッセージを読み込み中です…
+      </div>
+    );
+  }
+
+  if (messages.length === 0) {
+    return (
+      <div className="flex flex-1 flex-col items-center justify-center gap-3 px-6 py-12 text-center text-muted-foreground">
+        <p className="text-sm text-muted-foreground/80">まだメッセージがありません。</p>
+        <p className="text-xs text-muted-foreground/60">
+          最初のメッセージを送信して会話を始めましょう。
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="flex-1 space-y-6 overflow-y-auto px-6 py-6">
-      <div className="mx-auto flex w-fit items-center gap-3 rounded-full border border-border/60 bg-white/80 px-4 py-1 text-xs text-muted-foreground">
-        <span className="font-semibold">今日</span>
-        <div className="size-1 rounded-full bg-muted-foreground/50" />
-        <span>9 月 29 日</span>
-      </div>
       <div className="space-y-6">
         {messages.map((message) => (
-          <ChatMessageBubble key={message.id} message={message} />
+          <ChatMessageBubble key={message._id} message={message} />
         ))}
       </div>
     </div>
