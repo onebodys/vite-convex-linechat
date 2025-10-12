@@ -101,6 +101,14 @@ export const sendTextMessage = action({
         status: "sent",
       });
 
+      await ctx.runMutation(internal.line.events.applyEventToUserState, {
+        lineUserId,
+        eventType: "outgoing_message",
+        eventTimestamp: timestamp,
+        mode: "active",
+        isRedelivery: false,
+      });
+
       return {
         success: true,
         messageId,
@@ -117,6 +125,14 @@ export const sendTextMessage = action({
         messageId,
         status: "failed",
         errorMessage,
+      });
+
+      await ctx.runMutation(internal.line.events.applyEventToUserState, {
+        lineUserId,
+        eventType: "outgoing_message_failed",
+        eventTimestamp: timestamp,
+        mode: "active",
+        isRedelivery: false,
       });
 
       throw error;

@@ -1,4 +1,10 @@
-import type { FollowEvent, UnfollowEvent, WebhookEvent, WebhookRequestBody } from "@line/bot-sdk";
+import type {
+  FollowEvent,
+  MessageEvent,
+  UnfollowEvent,
+  WebhookEvent,
+  WebhookRequestBody,
+} from "@line/bot-sdk";
 import { internal } from "../_generated/api";
 import { httpAction } from "../_generated/server";
 
@@ -47,17 +53,33 @@ export const webhook = httpAction(async (ctx, request) => {
       rawEvent: JSON.stringify(event),
     });
 
-    if (event.type === "message" && event.message.type === "text") {
-      if (!event.source.userId) {
+    if (event.type === "message") {
+      // メッセージイベントは種別ごとに処理する前に最新タイムスタンプで状態を確実に更新したい
+      if (!lineUserId) {
         continue;
       }
-      await ctx.runMutation(internal.line.messages.persistIncomingTextMessage, {
-        lineUserId: event.source.userId,
-        lineMessageId: event.message.id,
-        text: event.message.text,
-        replyToken: event.replyToken,
-        timestamp: event.timestamp,
+
+      const messageEvent = event as MessageEvent;
+
+      if (messageEvent.message.type === "text") {
+        // テキストメッセージは個別で保存し、以降の UI 更新に備える
+        await ctx.runMutation(internal.line.messages.persistIncomingTextMessage, {
+          lineUserId,
+          lineMessageId: messageEvent.message.id,
+          text: messageEvent.message.text,
+          replyToken: messageEvent.replyToken,
+          timestamp: messageEvent.timestamp,
+        });
+      }
+
+      await ctx.runMutation(internal.line.events.applyEventToUserState, {
+        lineUserId,
+        eventType: messageEvent.type,
+        eventTimestamp: messageEvent.timestamp,
+        mode: messageEvent.mode,
+        isRedelivery: messageEvent.deliveryContext?.isRedelivery,
       });
+
       continue;
     }
 
@@ -89,12 +111,25 @@ export const webhook = httpAction(async (ctx, request) => {
     }
 
     if (unfollowEvent && lineUserId) {
+      // ブロックなどフォロー解除でも最終イベント時刻を更新する
       await ctx.runMutation(internal.line.events.applyEventToUserState, {
         lineUserId,
         eventType: unfollowEvent.type,
         eventTimestamp: unfollowEvent.timestamp,
         mode: unfollowEvent.mode,
         isRedelivery: unfollowEvent.deliveryContext?.isRedelivery,
+      });
+      continue;
+    }
+
+    if (lineUserId) {
+      // 上記以外のイベントもここで網羅的に拾って最終イベント時刻をリフレッシュする
+      await ctx.runMutation(internal.line.events.applyEventToUserState, {
+        lineUserId,
+        eventType: event.type,
+        eventTimestamp: event.timestamp,
+        mode: event.mode,
+        isRedelivery: event.deliveryContext?.isRedelivery,
       });
     }
   }
