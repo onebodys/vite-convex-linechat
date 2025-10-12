@@ -1,5 +1,6 @@
 {
   "$schema": "https://unpkg.com/knip@5.64.1/schema.json",
   "ignoreDependencies": ["lucide-react", "tailwindcss", "tw-animate-css"],
+  "ignore": ["src/lib/theme/tokens.ts"],
   "ignoreExportsUsedInFile": true
 }
