@@ -1,81 +1,51 @@
-# React + TypeScript + Vite
+# Vite Convex LINE Chat
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+English | [日本語](README-ja.md)
 
-Currently, two official plugins are available:
+## Overview
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+This project provides a LINE-inspired chat console built with React 19 and Convex. It combines a real-time conversation timeline with contact management so support teams can triage LINE messages from a single workspace.
 
-## React Compiler
+## Key Features
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- Interactive chat layout with conversation list, message bubble components, and a responsive sidebar.
+- Convex backend for storing contacts, threads, and webhook events from the LINE Messaging API.
+- LINE Bot SDK integration for validating requests and sending replies.
+- Utility library in `src/lib/` with shared theming tokens and helpers.
 
-## Expanding the ESLint configuration
+## Tech Stack
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+- React 19 + TypeScript on top of Vite 7 (Rolldown build).
+- Convex functions and database for real-time data access.
+- Tailwind CSS for styling with design tokens in `src/lib/theme/tokens.ts`.
+- Biome for linting/formatting, Knip for unused code detection, Vitest for future tests.
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+## Project Structure
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+- `src/`: React application entry (`main.tsx`, `App.tsx`), chat UI components, hooks, and assets.
+- `public/`: Static files served as-is by Vite.
+- `convex/`: Convex schema, queries, and mutations (do not edit `convex/_generated/`).
+- `shared/`: Cross-runtime types such as LINE user definitions.
+- `env.ts`: Zod schema that enforces required LINE credentials at startup.
+- Tooling configs (`biome.jsonc`, `knip.json`, `tsconfig.*`, `lefthook.yml`) live at the repository root.
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+## Getting Started
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+1. Install dependencies: `npm install`.
+2. Export the required environment variables or place them in a `.env.local` file consumed by your shell:
+   - `LINE_CHANNEL_SECRET`
+   - `LINE_CHANNEL_ACCESS_TOKEN`
+3. Start the development servers in one command: `npm run dev`. This runs `convex dev` and `vite --open` in parallel.
+4. Open the browser tab launched by Vite to inspect the chat interface. Convex will expose functions at `http://localhost:7878` by default.
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+## Development Workflow
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+- `npm run lint`: Check code style with Biome.
+- `npm run format`: Apply Biome fixes.
+- `npm run build`: Type-check and create a production bundle.
+- `npm run preview`: Serve the last production build locally.
+- `npm run knip`: Detect unused modules or exports.
 
-## クライアント画面のデザイン例
+Before opening a pull request, run `npm run build` and `npm run lint`, test LINE chat flows against a local Convex deployment (`npx convex dev`), and capture screenshots or terminal output in the PR description.
 
-<https://v0.app/chat/chat-app-design-fiwwBfpx5jI>
-
-## webhookエンドポイント
-
-<https://whimsical-raven-87.convex.site/line/webhook>
+Refer to `todo.md` for near-term implementation tasks and backlog items.

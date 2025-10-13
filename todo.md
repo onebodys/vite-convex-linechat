@@ -33,3 +33,7 @@
 - [x] ローカル開発手順（Convex開発サーバー、ngrokによるWebhookトンネリング、`.env`設定）を追記する
 - [ ] メッセージ送受信の流れを確認する最小限の結合テストまたは手動チェックリストを作成する
 - [ ] デプロイ手順（Convex deploy、LINEチャネルWebhook設定、Vercel/Netlifyのビルド設定）を準備する
+
+## 追加のToDo
+- [ ] https://docs.convex.dev/functions/validation 見る限りオブジェクト型があるけど、DBにはStringで保存してなかったっけっか
+- [ ] サイドバーにはlastEventの内容ではなく、最後のメッセージを表示するようにしてほしい、最初の登録の時はlastEventでよく、lastMessageがなければlastEventを表示くらいのロジックが良いかな
