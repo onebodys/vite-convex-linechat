@@ -9,7 +9,7 @@ import { ConversationTimeline } from "./conversation-timeline";
 import { useLineContacts } from "./hooks/use-line-contacts";
 import { useLineMessages } from "./hooks/use-line-messages";
 import { MessageComposer } from "./message-composer";
-import { channels } from "./mock-data";
+import { formatContactTag } from "./utils";
 
 export function ChatLayout() {
   const { contacts, isLoading } = useLineContacts();
@@ -49,9 +49,7 @@ export function ChatLayout() {
     }
   };
 
-  const subtitle = activeContact
-    ? `${activeContact.channel === "line" ? "LINE" : activeContact.channel === "email" ? "メール" : "SNS"} ・ ${activeContact.lastMessageAt ?? "---"}`
-    : "";
+  const subtitle = activeContact ? `LINE ・ ${activeContact.lastMessageAt ?? "---"}` : "";
 
   return (
     <div className="flex min-h-svh flex-col bg-gradient-to-br from-slate-100 via-white to-slate-200">
@@ -80,7 +78,6 @@ export function ChatLayout() {
             <ChatSidebar
               contacts={contactList}
               isLoading={isLoading}
-              channels={channels}
               activeContactId={activeContactId ?? undefined}
               onSelectContact={(contact) => setSelectedContactId(contact.id)}
             />
@@ -95,7 +92,9 @@ export function ChatLayout() {
                   <ConversationHeader
                     title={activeContact.name}
                     subtitle={subtitle}
-                    badgeLabel={activeContact.tags?.[0]}
+                    badgeLabel={
+                      activeContact.tags?.[0] ? formatContactTag(activeContact.tags[0]) : undefined
+                    }
                   />
 
                   <ConversationTimeline messages={messages} isLoading={isLoadingMessages} />

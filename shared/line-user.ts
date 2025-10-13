@@ -5,6 +5,7 @@ export const lineUserSummarySchema = z.looseObject({
   displayName: z.string().optional().nullable(),
   pictureUrl: z.url().optional().nullable(),
   statusMessage: z.string().optional().nullable(),
+  lastMessageText: z.string().optional().nullable(),
   lastEventType: z.string().optional().nullable(),
   lastEventAt: z.number().optional().nullable(),
   relationshipStatus: z.union([z.literal("following"), z.literal("blocked"), z.literal("unknown")]),

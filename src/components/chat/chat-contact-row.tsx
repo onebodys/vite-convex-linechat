@@ -1,5 +1,6 @@
 import { cn } from "@/lib/utils";
-import type { Contact } from "./mock-data";
+import type { Contact } from "./types";
+import { formatContactTag } from "./utils";
 
 export type ChatContactRowProps = {
   contact: Contact;
@@ -36,7 +37,6 @@ export function ChatContactRow({ contact, active = false, onSelect }: ChatContac
         <div className="flex items-start gap-2">
           <div className="flex-1">
             <p className="text-sm font-semibold text-foreground">{contact.name}</p>
-            <p className="text-xs text-muted-foreground">{contact.handle}</p>
           </div>
           <span className="whitespace-nowrap text-xs text-muted-foreground">
             {contact.lastMessageAt}
@@ -44,24 +44,15 @@ export function ChatContactRow({ contact, active = false, onSelect }: ChatContac
         </div>
         <p className="line-clamp-2 text-sm text-muted-foreground/80">{contact.lastMessage}</p>
         <div className="flex items-center gap-2">
-          <span
-            className={cn(
-              "inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium",
-              contact.channel === "line"
-                ? "bg-lime-100 text-lime-600"
-                : contact.channel === "instagram"
-                  ? "bg-pink-100 text-pink-600"
-                  : "bg-sky-100 text-sky-600",
-            )}
-          >
-            {contact.channel === "line" ? "LINE" : contact.channel === "email" ? "メール" : "SNS"}
+          <span className="inline-flex items-center rounded-full bg-lime-100 px-2 py-0.5 text-[11px] font-medium text-lime-600">
+            LINE
           </span>
           {contact.tags?.map((tag) => (
             <span
               key={tag}
               className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground"
             >
-              {tag}
+              {formatContactTag(tag)}
             </span>
           ))}
           {contact.unreadCount ? (

@@ -48,6 +48,7 @@ export default defineSchema({
     isRedelivery: v.optional(v.boolean()),
     lastEventType: v.optional(v.string()),
     lastEventAt: v.optional(v.number()),
+    lastMessageText: v.optional(v.string()),
     lastFollowedAt: v.optional(v.number()),
     lastUnblockedAt: v.optional(v.number()),
     blockedAt: v.optional(v.number()),

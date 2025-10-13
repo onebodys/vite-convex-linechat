@@ -2,7 +2,7 @@ import { useQuery } from "convex/react";
 import { useMemo } from "react";
 import { api } from "../../../../convex/_generated/api";
 import { type LineUserSummary, lineUserSummarySchema } from "../../../../shared/line-user";
-import type { Contact } from "../mock-data";
+import type { Contact } from "../types";
 import { mapLineUserToContact } from "../utils";
 
 export function useLineContacts(limit = 50) {

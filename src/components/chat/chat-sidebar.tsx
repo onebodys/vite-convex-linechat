@@ -1,14 +1,10 @@
-import { Filter, Search } from "lucide-react";
-import { ChannelFilterBar, type ChannelFilterBarProps } from "./channel-filter-bar";
+import { Search } from "lucide-react";
 import { ChatContactRow } from "./chat-contact-row";
-import type { Contact } from "./mock-data";
+import type { Contact } from "./types";
 
 export type ChatSidebarProps = {
   contacts: Contact[];
   isLoading: boolean;
-  channels: ChannelFilterBarProps["channels"];
-  activeChannelId?: string;
-  onSelectChannel?: ChannelFilterBarProps["onSelectChannel"];
   activeContactId?: string;
   onSelectContact?: (contact: Contact) => void;
 };
@@ -16,9 +12,6 @@ export type ChatSidebarProps = {
 export function ChatSidebar({
   contacts,
   isLoading,
-  channels,
-  activeChannelId = "all",
-  onSelectChannel,
   activeContactId,
   onSelectContact,
 }: ChatSidebarProps) {
@@ -31,19 +24,7 @@ export function ChatSidebar({
             className="w-full rounded-full border border-border/60 bg-white/80 px-10 py-2 text-sm text-foreground shadow-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/40"
             placeholder="名前・タグ・メモで検索"
           />
-          <button
-            type="button"
-            className="absolute right-2 top-1/2 flex -translate-y-1/2 items-center gap-1 rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary"
-          >
-            <Filter className="size-3.5" />
-            フィルター
-          </button>
         </div>
-        <ChannelFilterBar
-          channels={channels}
-          activeChannelId={activeChannelId}
-          onSelectChannel={onSelectChannel}
-        />
       </div>
 
       <div className="flex-1 space-y-3 overflow-y-auto pr-1">

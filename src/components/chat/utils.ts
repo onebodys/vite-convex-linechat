@@ -1,12 +1,11 @@
 import type { LineUserSummary } from "../../../shared/line-user";
 import { formatTimestamp } from "../../lib/datetime";
-import type { Contact } from "./mock-data";
+import type { Contact } from "./types";
 
 export { formatTimestamp } from "../../lib/datetime";
 
 export function mapLineUserToContact(user: LineUserSummary): Contact {
   const name = user.displayName ?? "LINE ユーザー";
-  const handle = user.lineUserId ? `@${user.lineUserId}` : "";
   const avatarSeed = encodeURIComponent(user.displayName ?? user.lineUserId ?? "line-user");
   const avatar =
     user.pictureUrl ?? `https://api.dicebear.com/7.x/initials/svg?radius=50&seed=${avatarSeed}`;
@@ -26,20 +25,32 @@ export function mapLineUserToContact(user: LineUserSummary): Contact {
     tags.push(user.lastEventType);
   }
 
-  const lastMessage =
+  const lastMessageText = user.lastMessageText?.trim();
+  const fallbackMessage =
     user.statusMessage ??
     (user.lastEventType ? `最終イベント: ${user.lastEventType}` : "メッセージ履歴はありません");
+  const lastMessage =
+    lastMessageText && lastMessageText.length > 0 ? lastMessageText : fallbackMessage;
 
   return {
     id: user.lineUserId,
     name,
-    handle,
     avatar,
     status: lastMessage,
     lastMessage,
     lastMessageAt: formatTimestamp(user.lastEventAt ?? user.updatedAt ?? null),
-    channel: "line",
     tags: tags.length ? tags : undefined,
     pinned: false,
   };
+}
+
+export function formatContactTag(tag: string): string {
+  switch (tag) {
+    case "outgoing_message":
+      return "送信済み";
+    case "incoming_message":
+      return "受信済み";
+    default:
+      return tag;
+  }
 }

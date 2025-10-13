@@ -25,6 +25,7 @@ export const list = query({
         displayName: state.displayName ?? null,
         pictureUrl: state.pictureUrl ?? null,
         statusMessage: state.statusMessage ?? null,
+        lastMessageText: state.lastMessageText ?? null,
         lastEventType: state.lastEventType ?? null,
         lastEventAt: state.lastEventAt ?? null,
         relationshipStatus: state.relationshipStatus,

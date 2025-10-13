@@ -107,6 +107,7 @@ export const sendTextMessage = action({
         eventTimestamp: timestamp,
         mode: "active",
         isRedelivery: false,
+        lastMessageText: text,
       });
 
       return {

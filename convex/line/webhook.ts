@@ -60,6 +60,8 @@ export const webhook = httpAction(async (ctx, request) => {
       }
 
       const messageEvent = event as MessageEvent;
+      const lastMessageText =
+        messageEvent.message.type === "text" ? messageEvent.message.text : undefined;
 
       if (messageEvent.message.type === "text") {
         // テキストメッセージは個別で保存し、以降の UI 更新に備える
@@ -78,6 +80,7 @@ export const webhook = httpAction(async (ctx, request) => {
         eventTimestamp: messageEvent.timestamp,
         mode: messageEvent.mode,
         isRedelivery: messageEvent.deliveryContext?.isRedelivery,
+        lastMessageText,
       });
 
       continue;
