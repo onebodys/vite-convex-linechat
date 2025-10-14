@@ -36,4 +36,4 @@
 
 ## 追加のToDo
 - [ ] https://docs.convex.dev/functions/validation 見る限りオブジェクト型があるけど、DBにはStringで保存してなかったっけっか
-- [ ] サイドバーにはlastEventの内容ではなく、最後のメッセージを表示するようにしてほしい、最初の登録の時はlastEventでよく、lastMessageがなければlastEventを表示くらいのロジックが良いかな
+- [x] サイドバーにはlastEventの内容ではなく、最後のメッセージを表示するようにしてほしい、最初の登録の時はlastEventでよく、lastMessageがなければlastEventを表示くらいのロジックが良いかな

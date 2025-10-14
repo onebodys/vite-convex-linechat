@@ -108,6 +108,7 @@ export const sendTextMessage = action({
         mode: "active",
         isRedelivery: false,
         lastMessageText: text,
+        lastMessageDirection: "outgoing",
       });
 
       return {
@@ -134,6 +135,7 @@ export const sendTextMessage = action({
         eventTimestamp: timestamp,
         mode: "active",
         isRedelivery: false,
+        lastMessageDirection: "outgoing",
       });
 
       throw error;

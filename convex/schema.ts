@@ -49,6 +49,7 @@ export default defineSchema({
     lastEventType: v.optional(v.string()),
     lastEventAt: v.optional(v.number()),
     lastMessageText: v.optional(v.string()),
+    lastMessageDirection: v.optional(messageDirection),
     lastFollowedAt: v.optional(v.number()),
     lastUnblockedAt: v.optional(v.number()),
     blockedAt: v.optional(v.number()),

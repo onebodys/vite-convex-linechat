@@ -93,7 +93,11 @@ export function ChatLayout() {
                     title={activeContact.name}
                     subtitle={subtitle}
                     badgeLabel={
-                      activeContact.tags?.[0] ? formatContactTag(activeContact.tags[0]) : undefined
+                      activeContact.lastMessageDirection
+                        ? formatContactTag(activeContact.lastMessageDirection)
+                        : activeContact.tags?.[0]
+                          ? formatContactTag(activeContact.tags[0])
+                          : undefined
                     }
                   />
 

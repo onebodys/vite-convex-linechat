@@ -81,6 +81,7 @@ export const webhook = httpAction(async (ctx, request) => {
         mode: messageEvent.mode,
         isRedelivery: messageEvent.deliveryContext?.isRedelivery,
         lastMessageText,
+        lastMessageDirection: "incoming",
       });
 
       continue;

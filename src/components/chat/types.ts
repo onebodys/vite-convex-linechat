@@ -5,6 +5,7 @@ export type Contact = {
   status: string;
   lastMessage: string;
   lastMessageAt: string;
+  lastMessageDirection?: "incoming" | "outgoing";
   unreadCount?: number;
   tags?: string[];
   pinned?: boolean;

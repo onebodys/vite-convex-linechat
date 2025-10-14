@@ -11,7 +11,8 @@
     "lint": "biome lint .",
     "format": "biome format --write .",
     "preview": "vite preview",
-    "knip": "knip"
+    "knip": "knip",
+    "test": "vitest"
   },
   "dependencies": {
     "@line/bot-sdk": "^10.3.0",

@@ -72,6 +72,7 @@ export const applyEventToUserState = internalMutation({
     isRedelivery: v.optional(v.boolean()),
     followIsUnblocked: v.optional(v.boolean()),
     lastMessageText: v.optional(v.string()),
+    lastMessageDirection: v.optional(v.union(v.literal("incoming"), v.literal("outgoing"))),
     profile: v.optional(profileShape),
     profileFetchStatus: v.optional(v.union(v.literal("success"), v.literal("error"))),
     profileFetchStatusCode: v.optional(v.number()),
@@ -102,6 +103,10 @@ export const applyEventToUserState = internalMutation({
 
     if (args.lastMessageText !== undefined) {
       updates.lastMessageText = args.lastMessageText;
+    }
+
+    if (args.lastMessageDirection !== undefined) {
+      updates.lastMessageDirection = args.lastMessageDirection;
     }
 
     if (args.eventType === "follow") {
@@ -140,6 +145,7 @@ export const applyEventToUserState = internalMutation({
         lastEventType: args.eventType,
         lastEventAt: args.eventTimestamp,
         lastMessageText: args.lastMessageText,
+        lastMessageDirection: args.lastMessageDirection,
         lastFollowedAt: updates.lastFollowedAt as number | undefined,
         lastUnblockedAt: updates.lastUnblockedAt as number | undefined,
         blockedAt: updates.blockedAt as number | undefined,
