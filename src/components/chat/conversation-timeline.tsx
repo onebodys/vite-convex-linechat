@@ -1,12 +1,16 @@
-import type { Doc } from "../../../convex/_generated/dataModel";
+import type { Doc, Id } from "../../../convex/_generated/dataModel";
 import { ChatMessageBubble } from "./chat-message-bubble";
 
 export function ConversationTimeline({
   messages,
   isLoading,
+  onRetryMessage,
+  retryingMessageIds,
 }: {
   messages: Doc<"messages">[];
   isLoading?: boolean;
+  onRetryMessage?: (messageId: Id<"messages">) => void;
+  retryingMessageIds?: Set<Id<"messages">>;
 }) {
   if (isLoading) {
     return (
@@ -31,7 +35,12 @@ export function ConversationTimeline({
     <div className="flex-1 space-y-6 overflow-y-auto px-6 py-6">
       <div className="space-y-6">
         {messages.map((message) => (
-          <ChatMessageBubble key={message._id} message={message} />
+          <ChatMessageBubble
+            key={message._id}
+            message={message}
+            onRetry={onRetryMessage}
+            isRetrying={retryingMessageIds?.has(message._id) ?? false}
+          />
         ))}
       </div>
     </div>

@@ -18,6 +18,7 @@
 ## Coding Style & Naming Conventions
 - Biome enforces 2-space indentation and a 100-character line width—run the formatter before committing.
 - Use PascalCase for React components (`ChatPanel.tsx`), camelCase for functions and hooks, and kebab-case for asset filenames.
+- All new source files should use kebab-case filenames unless the runtime forbids it. Convex modules only allow alphanumeric/underscore segments, so prefer snake_case there (e.g., `message_delivery.ts`). Rename existing camelCase files when touched.
 - Keep shared types in TypeScript modules close to their usage; export Convex validators from `convex/` to avoid drift between client and server.
 - Prefer pure functions and descriptive names over comments; document non-obvious Convex data flows in code docblocks when required.
 

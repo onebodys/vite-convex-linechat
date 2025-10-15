@@ -49,3 +49,27 @@ This project provides a LINE-inspired chat console built with React 19 and Conve
 Before opening a pull request, run `npm run build` and `npm run lint`, test LINE chat flows against a local Convex deployment (`npx convex dev`), and capture screenshots or terminal output in the PR description.
 
 Refer to `todo.md` for near-term implementation tasks and backlog items.
+
+## Message Retry Flow
+
+Outgoing messages persist to Convex with delivery metadata so both automatic and manual retries share the same path. The diagram below summarizes the flow:
+
+```mermaid
+flowchart TD
+  A[Agent sends from chat UI] --> B[sendTextMessage action]
+  B --> C[createOutgoingTextMessage mutation<br/>status = pending]
+  C --> D[deliverTextMessage helper]
+  D -->|success| E[updateMessageStatus status = sent<br/>applyEventToUserState]
+  D -->|failure| F[updateMessageStatus status = failed<br/>retryCount++, nextRetryAt]
+  F --> G{Retry trigger}
+  G -->|Retry button| H[resendTextMessage action]
+  G -->|Scheduler interval| I[retryFailedMessages internal action]
+  H --> D
+  I --> D
+```
+
+### Implementation Notes
+
+- `deliverTextMessage` centralizes the LINE Push API call and status updates so Convex stays consistent regardless of success or failure.
+- Failed deliveries track `retryCount`, `nextRetryAt`, and `lastAttemptAt`, which the `retryFailedMessages` worker uses every minute to decide which records to retry.
+- The chat UI exposes a “Retry” button on failed bubbles; manual retries run the same helper, keeping behavior aligned with the scheduled job.

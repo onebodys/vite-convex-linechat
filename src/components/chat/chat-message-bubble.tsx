@@ -1,6 +1,7 @@
 import { BadgeCheck, CircleAlert, Clock } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import type { Doc } from "../../../convex/_generated/dataModel";
+import type { Doc, Id } from "../../../convex/_generated/dataModel";
 
 const formatBubbleTime = (timestamp: number) =>
   new Date(timestamp).toLocaleTimeString("ja-JP", {
@@ -9,9 +10,24 @@ const formatBubbleTime = (timestamp: number) =>
     hour12: false,
   });
 
-export function ChatMessageBubble({ message }: { message: Doc<"messages"> }) {
+export function ChatMessageBubble({
+  message,
+  onRetry,
+  isRetrying = false,
+}: {
+  message: Doc<"messages">;
+  onRetry?: (messageId: Id<"messages">) => void;
+  isRetrying?: boolean;
+}) {
   const isAgent = message.direction === "outgoing";
   const status = message.status;
+
+  const handleRetry = () => {
+    if (!onRetry) {
+      return;
+    }
+    onRetry(message._id);
+  };
 
   return (
     <div
@@ -40,7 +56,23 @@ export function ChatMessageBubble({ message }: { message: Doc<"messages"> }) {
           )}
         >
           <span>{formatBubbleTime(message.createdAt)}</span>
-          {isAgent && status ? <StatusIndicator status={status} /> : null}
+          {isAgent && status ? (
+            <>
+              <StatusIndicator status={status} />
+              {status === "failed" && onRetry ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-7 px-3 text-xs"
+                  onClick={handleRetry}
+                  disabled={isRetrying}
+                >
+                  {isRetrying ? "再送中…" : "再送"}
+                </Button>
+              ) : null}
+            </>
+          ) : null}
         </div>
       </div>
     </div>

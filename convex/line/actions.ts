@@ -1,26 +1,13 @@
 "use node";
 
-import { HTTPFetchError, messagingApi, validateSignature } from "@line/bot-sdk";
+import { HTTPFetchError, validateSignature } from "@line/bot-sdk";
 import { v } from "convex/values";
 import { env } from "../../env";
 import { internal } from "../_generated/api";
 import type { Id } from "../_generated/dataModel";
 import { action, internalAction } from "../_generated/server";
-
-const { MessagingApiClient } = messagingApi;
-
-let cachedMessagingClient: InstanceType<typeof MessagingApiClient> | null = null;
-
-const getMessagingClient = () => {
-  if (cachedMessagingClient) {
-    return cachedMessagingClient;
-  }
-
-  cachedMessagingClient = new MessagingApiClient({
-    channelAccessToken: env.LINE_CHANNEL_ACCESS_TOKEN,
-  });
-  return cachedMessagingClient;
-};
+import { deliverTextMessage } from "./message_delivery";
+import { getMessagingClient } from "./messaging_client";
 
 export const doValidateSignature = internalAction({
   args: {
@@ -78,7 +65,6 @@ export const sendTextMessage = action({
     text: v.string(),
   },
   handler: async (ctx, { lineUserId, text }): Promise<SendTextMessageResult> => {
-    const client = getMessagingClient();
     const timestamp = Date.now();
 
     const messageId: Id<"messages"> = await ctx.runMutation(
@@ -90,55 +76,50 @@ export const sendTextMessage = action({
       },
     );
 
-    try {
-      await client.pushMessage({
-        to: lineUserId,
-        messages: [{ type: "text", text }],
-      });
+    await deliverTextMessage({
+      ctx,
+      messageId,
+      lineUserId,
+      text,
+      isRetry: false,
+      currentRetryCount: 0,
+    });
 
-      await ctx.runMutation(internal.line.messages.updateMessageStatus, {
-        messageId,
-        status: "sent",
-      });
+    return {
+      success: true,
+      messageId,
+    };
+  },
+});
 
-      await ctx.runMutation(internal.line.events.applyEventToUserState, {
-        lineUserId,
-        eventType: "outgoing_message",
-        eventTimestamp: timestamp,
-        mode: "active",
-        isRedelivery: false,
-        lastMessageText: text,
-        lastMessageDirection: "outgoing",
-      });
+export const resendTextMessage = action({
+  args: {
+    messageId: v.id("messages"),
+  },
+  handler: async (ctx, { messageId }) => {
+    const message = await ctx.runQuery(internal.line.messages.getMessageById, { messageId });
 
-      return {
-        success: true,
-        messageId,
-      };
-    } catch (error) {
-      let errorMessage: string | undefined;
-      if (error instanceof HTTPFetchError) {
-        errorMessage = error.body;
-      } else if (error instanceof Error) {
-        errorMessage = error.message;
-      }
-
-      await ctx.runMutation(internal.line.messages.updateMessageStatus, {
-        messageId,
-        status: "failed",
-        errorMessage,
-      });
-
-      await ctx.runMutation(internal.line.events.applyEventToUserState, {
-        lineUserId,
-        eventType: "outgoing_message_failed",
-        eventTimestamp: timestamp,
-        mode: "active",
-        isRedelivery: false,
-        lastMessageDirection: "outgoing",
-      });
-
-      throw error;
+    if (!message) {
+      throw new Error("Message not found");
     }
+
+    if (message.direction !== "outgoing") {
+      throw new Error("Only outgoing messages can be resent");
+    }
+
+    if (message.status !== "failed") {
+      throw new Error("Message is not in a failed state");
+    }
+
+    await deliverTextMessage({
+      ctx,
+      messageId,
+      lineUserId: message.lineUserId,
+      text: message.text,
+      isRetry: true,
+      currentRetryCount: message.retryCount ?? 0,
+    });
+
+    return { success: true } as const;
   },
 });

@@ -22,10 +22,14 @@ export default defineSchema({
     lineMessageId: v.optional(v.string()),
     replyToken: v.optional(v.string()),
     errorMessage: v.optional(v.string()),
+    retryCount: v.optional(v.number()),
+    nextRetryAt: v.optional(v.number()),
+    lastAttemptAt: v.optional(v.number()),
     createdAt: v.number(),
   })
     .index("byUserCreatedAt", ["lineUserId", "createdAt"])
-    .index("byStatus", ["status"]),
+    .index("byStatus", ["status"])
+    .index("byStatusNextRetry", ["status", "nextRetryAt"]),
   lineEvents: defineTable({
     webhookEventId: v.string(),
     eventType: v.string(),

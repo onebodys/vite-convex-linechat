@@ -50,3 +50,27 @@ React 19 と Convex を組み合わせて、LINE 風のサポート向けチャ�
 Pull Request を作成する前に `npm run build` と `npm run lint` を実行し、`npx convex dev` を用いたローカル環境で LINE チャットの動作確認を行い、結果を PR 説明に記録してください。
 
 近々のタスクやバックログは `todo.md` を参照してください。
+
+## 再送信フロー
+
+送信メッセージは Convex に配信メタデータ付きで保存され、自動・手動の再送どちらでも同じ処理を通ります。以下の図に流れをまとめています。
+
+```mermaid
+flowchart TD
+  A[オペレーターがチャットから送信] --> B[sendTextMessage アクション]
+  B --> C[createOutgoingTextMessage ミューテーション<br/>status = pending]
+  C --> D[deliverTextMessage ヘルパー]
+  D -->|成功| E[updateMessageStatus status = sent<br/>applyEventToUserState]
+  D -->|失敗| F[updateMessageStatus status = failed<br/>retryCount++, nextRetryAt]
+  F --> G{再送トリガー}
+  G -->|再送ボタン| H[resendTextMessage アクション]
+  G -->|scheduler interval| I[retryFailedMessages 内部アクション]
+  H --> D
+  I --> D
+```
+
+### 実装メモ
+
+- `deliverTextMessage` が LINE Push API 呼び出しとステータス更新を一手に担い、成功・失敗どちらの場合も Convex の状態を即座に同期します。
+- 失敗したメッセージは `retryCount`, `nextRetryAt`, `lastAttemptAt` を記録し、`retryFailedMessages` が 1 分ごとに再送可能なものだけを処理します。
+- チャットバブルの「再送」ボタンも同じヘルパーを使うため、UI での手動再送とバックグラウンド再送の挙動が一致します。

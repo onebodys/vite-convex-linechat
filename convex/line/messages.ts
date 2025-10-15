@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { internalMutation, query } from "../_generated/server";
+import { internalMutation, internalQuery, query } from "../_generated/server";
 
 export const persistIncomingTextMessage = internalMutation({
   args: {
@@ -34,6 +34,8 @@ export const createOutgoingTextMessage = internalMutation({
       direction: "outgoing",
       text: args.text,
       status: "pending",
+      retryCount: 0,
+      lastAttemptAt: args.timestamp,
       createdAt: args.timestamp,
     });
 
@@ -44,13 +46,22 @@ export const createOutgoingTextMessage = internalMutation({
 export const updateMessageStatus = internalMutation({
   args: {
     messageId: v.id("messages"),
-    status: v.union(v.literal("sent"), v.literal("failed")),
+    status: v.union(v.literal("pending"), v.literal("sent"), v.literal("failed")),
     errorMessage: v.optional(v.string()),
+    retryCount: v.optional(v.number()),
+    nextRetryAt: v.optional(v.number()),
+    lastAttemptAt: v.optional(v.number()),
   },
-  handler: async (ctx, { messageId, status, errorMessage }) => {
+  handler: async (
+    ctx,
+    { messageId, status, errorMessage, retryCount, nextRetryAt, lastAttemptAt },
+  ) => {
     await ctx.db.patch(messageId, {
       status,
       errorMessage,
+      retryCount,
+      nextRetryAt,
+      lastAttemptAt,
     });
   },
 });
@@ -69,5 +80,31 @@ export const listByLineUser = query({
       .take(take);
 
     return docs.reverse();
+  },
+});
+
+export const getMessageById = internalQuery({
+  args: {
+    messageId: v.id("messages"),
+  },
+  handler: async (ctx, { messageId }) => {
+    return ctx.db.get(messageId);
+  },
+});
+
+export const listRetryableMessages = internalQuery({
+  args: {
+    now: v.number(),
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, { now, limit }) => {
+    const take = Math.min(Math.max(limit ?? 10, 1), 50);
+    const candidates = await ctx.db
+      .query("messages")
+      .withIndex("byStatusNextRetry", (q) => q.eq("status", "failed").lte("nextRetryAt", now))
+      .order("asc")
+      .take(take);
+
+    return candidates;
   },
 });

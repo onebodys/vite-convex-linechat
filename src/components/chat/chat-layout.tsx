@@ -3,6 +3,7 @@ import { Plus, Settings } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { api } from "../../../convex/_generated/api";
+import type { Id } from "../../../convex/_generated/dataModel";
 import { ChatSidebar } from "./chat-sidebar";
 import { ConversationHeader } from "./conversation-header";
 import { ConversationTimeline } from "./conversation-timeline";
@@ -32,7 +33,9 @@ export function ChatLayout() {
   const { messages, isLoading: isLoadingMessages } = useLineMessages(activeContactId);
 
   const sendTextMessage = useAction(api.line.actions.sendTextMessage);
+  const resendTextMessage = useAction(api.line.actions.resendTextMessage);
   const [isSending, setIsSending] = useState(false);
+  const [retryingMessageIds, setRetryingMessageIds] = useState<Set<Id<"messages">>>(new Set());
 
   const handleSendMessage = async (text: string) => {
     if (!activeContactId || text.trim().length === 0) {
@@ -46,6 +49,26 @@ export function ChatLayout() {
       // TODO: surface error to UI (toast/snackbar) if needed
     } finally {
       setIsSending(false);
+    }
+  };
+
+  const handleRetryMessage = async (messageId: Id<"messages">) => {
+    setRetryingMessageIds((prev) => {
+      const next = new Set(prev);
+      next.add(messageId);
+      return next;
+    });
+
+    try {
+      await resendTextMessage({ messageId });
+    } catch (error) {
+      console.error("Failed to resend message", error);
+    } finally {
+      setRetryingMessageIds((prev) => {
+        const next = new Set(prev);
+        next.delete(messageId);
+        return next;
+      });
     }
   };
 
@@ -101,7 +124,12 @@ export function ChatLayout() {
                     }
                   />
 
-                  <ConversationTimeline messages={messages} isLoading={isLoadingMessages} />
+                  <ConversationTimeline
+                    messages={messages}
+                    isLoading={isLoadingMessages}
+                    onRetryMessage={handleRetryMessage}
+                    retryingMessageIds={retryingMessageIds}
+                  />
 
                   <div className="border-t border-border/70 bg-muted/40 px-6 py-4">
                     <MessageComposer
