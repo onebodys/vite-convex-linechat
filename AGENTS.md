@@ -32,3 +32,11 @@
 - PRs must describe motivation, testing evidence, linked issues, and include screenshots or terminal captures for UI/backend changes. Note any new env vars (`CONVEX_DEPLOYMENT`, LINE secrets) and rollout steps.
 - When adding new backend secrets, register them with Convex and extend `env.ts` so deployments fail fast if they’re missing.
 - Tests currently use vitest (`npx vitest run`); add specs alongside shared helpers when introducing new logic.
+
+## ExecPlans
+
+When writing complex features or significant refactors, use an ExecPlan (as described in .agent/PLANS.md) from design to implementation.
+
+## Additional Agent Directives
+- Reason about tasks in English, but produce end-user responses in Japanese.
+- Whenever you add or modify functions, classes, or notable modules, include concise Japanese JSDoc-style comments that clarify their behavior for future readers.

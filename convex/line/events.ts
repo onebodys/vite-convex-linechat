@@ -12,6 +12,14 @@ type ChannelMode = "active" | "standby" | "unknown";
 
 type RelationshipStatus = "following" | "blocked" | "unknown";
 
+const messagePreviewType = v.union(v.literal("text"), v.literal("media"), v.literal("template"));
+
+const deliveryStatusSnapshot = v.union(
+  v.literal("pending"),
+  v.literal("success"),
+  v.literal("failed"),
+);
+
 const normalizeMode = (mode?: string | null): ChannelMode => {
   if (mode === "active" || mode === "standby") {
     return mode;
@@ -44,6 +52,7 @@ export const recordWebhookEvent = internalMutation({
     replyToken: v.optional(v.string()),
     followIsUnblocked: v.optional(v.boolean()),
     rawEvent: v.string(),
+    payloadSummary: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const channelMode = normalizeMode(args.mode);
@@ -58,6 +67,8 @@ export const recordWebhookEvent = internalMutation({
       replyToken: args.replyToken,
       followIsUnblocked: args.followIsUnblocked,
       rawEvent: args.rawEvent,
+      source: "webhook",
+      payloadSummary: args.payloadSummary,
       createdAt: Date.now(),
     });
   },
@@ -71,7 +82,8 @@ export const applyEventToUserState = internalMutation({
     mode: v.optional(v.string()),
     isRedelivery: v.optional(v.boolean()),
     followIsUnblocked: v.optional(v.boolean()),
-    lastMessageText: v.optional(v.string()),
+    lastMessageSummary: v.optional(v.string()),
+    lastMessagePreviewType: v.optional(messagePreviewType),
     lastMessageDirection: v.optional(v.union(v.literal("incoming"), v.literal("outgoing"))),
     profile: v.optional(profileShape),
     profileFetchStatus: v.optional(v.union(v.literal("success"), v.literal("error"))),
@@ -101,8 +113,12 @@ export const applyEventToUserState = internalMutation({
       updatedAt: now,
     };
 
-    if (args.lastMessageText !== undefined) {
-      updates.lastMessageText = args.lastMessageText;
+    if (args.lastMessageSummary !== undefined) {
+      updates.lastMessageSummary = args.lastMessageSummary;
+    }
+
+    if (args.lastMessagePreviewType !== undefined) {
+      updates.lastMessagePreviewType = args.lastMessagePreviewType;
     }
 
     if (args.lastMessageDirection !== undefined) {
@@ -144,7 +160,8 @@ export const applyEventToUserState = internalMutation({
         isRedelivery: updates.isRedelivery as boolean | undefined,
         lastEventType: args.eventType,
         lastEventAt: args.eventTimestamp,
-        lastMessageText: args.lastMessageText,
+        lastMessageSummary: args.lastMessageSummary,
+        lastMessagePreviewType: args.lastMessagePreviewType,
         lastMessageDirection: args.lastMessageDirection,
         lastFollowedAt: updates.lastFollowedAt as number | undefined,
         lastUnblockedAt: updates.lastUnblockedAt as number | undefined,
@@ -163,5 +180,52 @@ export const applyEventToUserState = internalMutation({
     }
 
     await ctx.db.patch(existing._id, updates);
+  },
+});
+
+export const recordPushEvent = internalMutation({
+  args: {
+    messageId: v.id("messages"),
+    deliveryAttemptId: v.id("messageDeliveries"),
+    attempt: v.number(),
+    eventType: v.string(),
+    timestamp: v.number(),
+    lineUserId: v.optional(v.string()),
+    payloadSummary: v.optional(v.string()),
+    deliveryStatusSnapshot: v.optional(deliveryStatusSnapshot),
+    errorMessage: v.optional(v.string()),
+    nextRetryAt: v.optional(v.number()),
+    isRedelivery: v.optional(v.boolean()),
+  },
+  handler: async (ctx, args) => {
+    const rawEvent = {
+      kind: "push",
+      eventType: args.eventType,
+      attempt: args.attempt,
+      messageId: args.messageId,
+      deliveryAttemptId: args.deliveryAttemptId,
+      lineUserId: args.lineUserId,
+      errorMessage: args.errorMessage,
+      nextRetryAt: args.nextRetryAt,
+    };
+
+    const webhookEventId = `push:${args.messageId}:${args.attempt}:${args.timestamp}`;
+
+    await ctx.db.insert("lineEvents", {
+      webhookEventId,
+      eventType: args.eventType,
+      timestamp: args.timestamp,
+      lineUserId: args.lineUserId,
+      sourceType: "bot",
+      mode: "active",
+      isRedelivery: args.isRedelivery,
+      rawEvent: JSON.stringify(rawEvent),
+      source: "push",
+      messageId: args.messageId,
+      deliveryAttemptId: args.deliveryAttemptId,
+      deliveryStatusSnapshot: args.deliveryStatusSnapshot,
+      payloadSummary: args.payloadSummary,
+      createdAt: Date.now(),
+    });
   },
 });

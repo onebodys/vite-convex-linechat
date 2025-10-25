@@ -6,13 +6,15 @@ import type { Id } from "../_generated/dataModel";
 import type { ActionCtx } from "../_generated/server";
 import { getMessagingClient } from "./messaging_client";
 
+type RetryStrategy = "immediate" | "backoff" | "manual";
+
 type DeliverTextMessageParams = {
   ctx: ActionCtx;
   messageId: Id<"messages">;
   lineUserId: string;
   text: string;
-  isRetry: boolean;
-  currentRetryCount: number;
+  isRedelivery: boolean;
+  retryStrategy: RetryStrategy;
 };
 
 // LINE API 再送間隔の最小値と上限（指数バックオフ）
@@ -26,25 +28,34 @@ const computeNextRetry = (attempts: number, now: number) => {
   return now + delay;
 };
 
+const clampSummary = (value: string, max = 140) =>
+  value.length > max ? value.slice(0, max) : value;
+
 export async function deliverTextMessage({
   ctx,
   messageId,
   lineUserId,
   text,
-  isRetry,
-  currentRetryCount,
+  isRedelivery,
+  retryStrategy,
 }: DeliverTextMessageParams) {
   const attemptTimestamp = Date.now();
   const client = getMessagingClient();
 
-  // 毎回送信前に pending に戻して UI を最新状態にする
-  await ctx.runMutation(internal.line.messages.updateMessageStatus, {
+  const { deliveryAttemptId, attempt } = await ctx.runMutation(
+    internal.line.message_deliveries.createDeliveryAttempt,
+    {
+      messageId,
+      requestedAt: attemptTimestamp,
+      retryStrategy,
+    },
+  );
+
+  await ctx.runMutation(internal.line.messages.updateMessageLifecycle, {
     messageId,
     status: "pending",
-    errorMessage: undefined,
-    retryCount: currentRetryCount,
-    nextRetryAt: undefined,
-    lastAttemptAt: attemptTimestamp,
+    deliveryState: "delivering",
+    updatedAt: attemptTimestamp,
   });
 
   try {
@@ -53,26 +64,45 @@ export async function deliverTextMessage({
       messages: [{ type: "text", text }],
     });
 
-    await ctx.runMutation(internal.line.messages.updateMessageStatus, {
+    await ctx.runMutation(internal.line.message_deliveries.completeDeliveryAttempt, {
+      deliveryAttemptId,
+      status: "success",
+      completedAt: attemptTimestamp,
+      responseStatus: 200,
+    });
+
+    await ctx.runMutation(internal.line.messages.updateMessageLifecycle, {
       messageId,
       status: "sent",
-      errorMessage: undefined,
-      retryCount: currentRetryCount,
-      nextRetryAt: undefined,
-      lastAttemptAt: attemptTimestamp,
+      deliveryState: null,
+      updatedAt: attemptTimestamp,
     });
+
+    const summary = clampSummary(text);
 
     await ctx.runMutation(internal.line.events.applyEventToUserState, {
       lineUserId,
       eventType: "outgoing_message",
       eventTimestamp: attemptTimestamp,
       mode: "active",
-      isRedelivery: isRetry,
-      lastMessageText: text,
+      isRedelivery,
+      lastMessageSummary: summary,
+      lastMessagePreviewType: "text",
       lastMessageDirection: "outgoing",
     });
+
+    await ctx.runMutation(internal.line.events.recordPushEvent, {
+      messageId,
+      deliveryAttemptId,
+      attempt,
+      eventType: "push_message_success",
+      timestamp: attemptTimestamp,
+      lineUserId,
+      payloadSummary: summary,
+      deliveryStatusSnapshot: "success",
+      isRedelivery,
+    });
   } catch (rawError) {
-    const nextRetryCount = currentRetryCount + 1;
     let errorMessage: string | undefined;
 
     if (rawError instanceof HTTPFetchError) {
@@ -81,14 +111,21 @@ export async function deliverTextMessage({
       errorMessage = rawError.message;
     }
 
-    // 失敗時はエラーメッセージと次回リトライ時刻を保存
-    await ctx.runMutation(internal.line.messages.updateMessageStatus, {
+    const nextRetryAt = computeNextRetry(attempt, attemptTimestamp);
+
+    await ctx.runMutation(internal.line.message_deliveries.completeDeliveryAttempt, {
+      deliveryAttemptId,
+      status: "failed",
+      completedAt: attemptTimestamp,
+      errorMessage,
+      nextRetryAt,
+    });
+
+    await ctx.runMutation(internal.line.messages.updateMessageLifecycle, {
       messageId,
       status: "failed",
-      errorMessage,
-      retryCount: nextRetryCount,
-      nextRetryAt: computeNextRetry(nextRetryCount, attemptTimestamp),
-      lastAttemptAt: attemptTimestamp,
+      deliveryState: "queued",
+      updatedAt: attemptTimestamp,
     });
 
     await ctx.runMutation(internal.line.events.applyEventToUserState, {
@@ -96,8 +133,22 @@ export async function deliverTextMessage({
       eventType: "outgoing_message_failed",
       eventTimestamp: attemptTimestamp,
       mode: "active",
-      isRedelivery: isRetry,
+      isRedelivery,
       lastMessageDirection: "outgoing",
+    });
+
+    await ctx.runMutation(internal.line.events.recordPushEvent, {
+      messageId,
+      deliveryAttemptId,
+      attempt,
+      eventType: "push_message_failed",
+      timestamp: attemptTimestamp,
+      lineUserId,
+      payloadSummary: clampSummary(text),
+      deliveryStatusSnapshot: "failed",
+      errorMessage,
+      nextRetryAt,
+      isRedelivery,
     });
 
     throw rawError;

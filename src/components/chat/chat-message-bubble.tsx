@@ -1,7 +1,8 @@
 import { BadgeCheck, CircleAlert, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import type { Doc, Id } from "../../../convex/_generated/dataModel";
+import type { Id } from "../../../convex/_generated/dataModel";
+import type { TimelineEntry } from "./types";
 
 const formatBubbleTime = (timestamp: number) =>
   new Date(timestamp).toLocaleTimeString("ja-JP", {
@@ -10,23 +11,107 @@ const formatBubbleTime = (timestamp: number) =>
     hour12: false,
   });
 
+/**
+ * @description チャットタイムラインの1件分を表示するバブルコンポーネント。
+ */
 export function ChatMessageBubble({
-  message,
+  entry,
   onRetry,
   isRetrying = false,
 }: {
-  message: Doc<"messages">;
+  entry: TimelineEntry;
   onRetry?: (messageId: Id<"messages">) => void;
   isRetrying?: boolean;
 }) {
+  /**
+   * @description タイムライン内の単一メッセージと付随メディア。
+   */
+  const { message, media } = entry;
   const isAgent = message.direction === "outgoing";
   const status = message.status;
+  const content = message.content;
 
   const handleRetry = () => {
     if (!onRetry) {
       return;
     }
     onRetry(message._id);
+  };
+
+  const renderMedia = () => {
+    if (!media) {
+      return (
+        <p className="opacity-80">
+          {content.kind === "media" ? `[${content.mediaType}]` : "[メディア]"}
+        </p>
+      );
+    }
+
+    const label = media.fileName ?? `[${media.mediaType}]`;
+
+    if (media.mediaType === "image" && media.url) {
+      return (
+        <div className="space-y-2">
+          <img
+            src={media.url}
+            alt={label}
+            className="max-h-64 w-full rounded-xl object-contain"
+            loading="lazy"
+          />
+          {media.fileName ? <p className="text-xs opacity-70">{media.fileName}</p> : null}
+        </div>
+      );
+    }
+
+    if (media.mediaType === "video" && media.url) {
+      return (
+        <div className="space-y-2">
+          {/* biome-ignore lint/a11y/useMediaCaption: 動画に付随する字幕ファイルが存在しないため */}
+          <video className="max-h-64 w-full rounded-xl" controls src={media.url} />
+          {media.fileName ? <p className="text-xs opacity-70">{media.fileName}</p> : null}
+        </div>
+      );
+    }
+
+    if (media.mediaType === "audio" && media.url) {
+      return (
+        <div className="space-y-2">
+          {/* biome-ignore lint/a11y/useMediaCaption: 音声メッセージの字幕データが提供されないため */}
+          <audio controls src={media.url} className="w-full" />
+          <p className="text-xs opacity-70">{label}</p>
+        </div>
+      );
+    }
+
+    if (media.url) {
+      return (
+        <div className="space-y-2">
+          <a
+            href={media.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex max-w-full items-center gap-2 truncate underline"
+          >
+            {label}
+          </a>
+          {media.mimeType ? <p className="text-xs opacity-70">{media.mimeType}</p> : null}
+        </div>
+      );
+    }
+
+    return <p className="opacity-80">{label}</p>;
+  };
+
+  const renderContent = () => {
+    if (content.kind === "text") {
+      return <p className="whitespace-pre-line break-words">{content.text}</p>;
+    }
+
+    if (content.kind === "media") {
+      return renderMedia();
+    }
+
+    return <p className="whitespace-pre-line break-words opacity-80">{content.altText}</p>;
   };
 
   return (
@@ -47,7 +132,7 @@ export function ChatMessageBubble({
             isAgent ? "ml-auto bg-primary text-primary-foreground" : "bg-white text-foreground",
           )}
         >
-          <p className="whitespace-pre-line break-words">{message.text}</p>
+          {renderContent()}
         </div>
         <div
           className={cn(
@@ -59,7 +144,7 @@ export function ChatMessageBubble({
           {isAgent && status ? (
             <>
               <StatusIndicator status={status} />
-              {status === "failed" && onRetry ? (
+              {status === "failed" && onRetry && content.kind === "text" ? (
                 <Button
                   type="button"
                   variant="outline"
@@ -79,8 +164,11 @@ export function ChatMessageBubble({
   );
 }
 
-type MessageStatus = Doc<"messages">["status"];
+type MessageStatus = TimelineEntry["message"]["status"];
 
+/**
+ * @description 送信ステータスに応じてラベルを返すインジケーター。
+ */
 function StatusIndicator({ status }: { status: MessageStatus }) {
   if (status === "sent") {
     return (
@@ -103,6 +191,14 @@ function StatusIndicator({ status }: { status: MessageStatus }) {
       <span className="inline-flex items-center gap-1 text-rose-500">
         <CircleAlert className="size-3" />
         失敗
+      </span>
+    );
+  }
+  if (status === "canceled") {
+    return (
+      <span className="inline-flex items-center gap-1 text-amber-500">
+        <CircleAlert className="size-3" />
+        キャンセル
       </span>
     );
   }

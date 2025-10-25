@@ -14,13 +14,26 @@ export const retryFailedMessages = internalAction({
     const now = Date.now();
     // Convex のクォータを守るために 50 件までに制限
     const take = Math.min(Math.max(limit ?? 10, 1), 50);
-    const messages = await ctx.runQuery(internal.line.messages.listRetryableMessages, {
+    const attempts = await ctx.runQuery(internal.line.message_deliveries.listRetryableAttempts, {
       now,
       limit: take,
     });
 
-    for (const message of messages) {
-      if (!message) {
+    for (const attempt of attempts) {
+      const message = await ctx.runQuery(internal.line.messages.getMessageById, {
+        messageId: attempt.messageId,
+      });
+
+      if (!message || message.direction !== "outgoing") {
+        continue;
+      }
+
+      const content =
+        message.content ??
+        ("text" in message ? { kind: "text" as const, text: message.text ?? "" } : undefined);
+
+      if (!content || content.kind !== "text") {
+        console.warn("retryFailedMessages: unsupported content kind", content?.kind ?? "unknown");
         continue;
       }
 
@@ -29,9 +42,9 @@ export const retryFailedMessages = internalAction({
           ctx,
           messageId: message._id,
           lineUserId: message.lineUserId,
-          text: message.text,
-          isRetry: true,
-          currentRetryCount: message.retryCount ?? 0,
+          text: content.text,
+          isRedelivery: true,
+          retryStrategy: "backoff",
         });
       } catch (error) {
         // 連続失敗はログに残し、次のスケジュールで再挑戦させる

@@ -5,7 +5,11 @@ export const lineUserSummarySchema = z.looseObject({
   displayName: z.string().optional().nullable(),
   pictureUrl: z.url().optional().nullable(),
   statusMessage: z.string().optional().nullable(),
-  lastMessageText: z.string().optional().nullable(),
+  lastMessageSummary: z.string().optional().nullable(),
+  lastMessagePreviewType: z
+    .union([z.literal("text"), z.literal("media"), z.literal("template")])
+    .optional()
+    .nullable(),
   lastMessageDirection: z
     .union([z.literal("incoming"), z.literal("outgoing")])
     .optional()

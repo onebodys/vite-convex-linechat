@@ -26,7 +26,15 @@ export function mapLineUserToContact(user: LineUserSummary): Contact {
     tags.push("standby");
   }
 
-  const lastMessage = user.lastMessageText?.trim() ?? "";
+  const rawSummary = user.lastMessageSummary?.trim();
+  const lastMessage =
+    rawSummary && rawSummary.length > 0
+      ? rawSummary
+      : user.lastMessagePreviewType === "media"
+        ? "[メディア]"
+        : user.lastMessagePreviewType === "template"
+          ? "[テンプレート]"
+          : "";
 
   return {
     id: user.lineUserId,

@@ -1,13 +1,17 @@
-import type { Doc, Id } from "../../../convex/_generated/dataModel";
+import type { Id } from "../../../convex/_generated/dataModel";
 import { ChatMessageBubble } from "./chat-message-bubble";
+import type { TimelineEntry } from "./types";
 
+/**
+ * @description タイムライン全体をスクロール表示するラッパーコンポーネント。
+ */
 export function ConversationTimeline({
   messages,
   isLoading,
   onRetryMessage,
   retryingMessageIds,
 }: {
-  messages: Doc<"messages">[];
+  messages: TimelineEntry[];
   isLoading?: boolean;
   onRetryMessage?: (messageId: Id<"messages">) => void;
   retryingMessageIds?: Set<Id<"messages">>;
@@ -36,10 +40,10 @@ export function ConversationTimeline({
       <div className="space-y-6">
         {messages.map((message) => (
           <ChatMessageBubble
-            key={message._id}
-            message={message}
+            key={message.message._id}
+            entry={message}
             onRetry={onRetryMessage}
-            isRetrying={retryingMessageIds?.has(message._id) ?? false}
+            isRetrying={retryingMessageIds?.has(message.message._id) ?? false}
           />
         ))}
       </div>

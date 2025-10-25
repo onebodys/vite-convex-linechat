@@ -81,8 +81,8 @@ export const sendTextMessage = action({
       messageId,
       lineUserId,
       text,
-      isRetry: false,
-      currentRetryCount: 0,
+      isRedelivery: false,
+      retryStrategy: "immediate",
     });
 
     return {
@@ -111,13 +111,21 @@ export const resendTextMessage = action({
       throw new Error("Message is not in a failed state");
     }
 
+    const content =
+      message.content ??
+      ("text" in message ? { kind: "text" as const, text: message.text ?? "" } : undefined);
+
+    if (!content || content.kind !== "text") {
+      throw new Error("Only text messages can be resent with this action");
+    }
+
     await deliverTextMessage({
       ctx,
       messageId,
       lineUserId: message.lineUserId,
-      text: message.text,
-      isRetry: true,
-      currentRetryCount: message.retryCount ?? 0,
+      text: content.text,
+      isRedelivery: true,
+      retryStrategy: "manual",
     });
 
     return { success: true } as const;
