@@ -74,3 +74,31 @@ flowchart TD
 - `deliverTextMessage` が LINE Push API 呼び出しとステータス更新を一手に担い、成功・失敗どちらの場合も Convex の状態を即座に同期します。
 - 失敗したメッセージは `retryCount`, `nextRetryAt`, `lastAttemptAt` を記録し、`retryFailedMessages` が 1 分ごとに再送可能なものだけを処理します。
 - チャットバブルの「再送」ボタンも同じヘルパーを使うため、UI での手動再送とバックグラウンド再送の挙動が一致します。
+
+## リッチメディアの取り込みと表示
+
+テキスト以外のメッセージもチャットタイムラインに表示できるよう、専用パイプラインを備えています。
+
+1. `convex/line/webhook.ts` が受信イベントを正規化し、LINE のメッセージ種別を `content` ユニオンにマッピングします。メディア系イベントはバイナリ取得用アクションを起動します。
+2. `convex/line/content.ts` が `MessagingApiBlobClient` で添付ファイルをダウンロードし、Convex Storage に保存してサイズ・MIME タイプ・Storage ID を返します。
+3. `convex/line/messages.listTimelineByLineUser` はメッセージ本体に加えて署名付き URL を含むタイムラインエントリを返し、UI から直接参照できるようにします。
+4. React 側では `ChatMessageBubble` が画像・動画・音声のプレビューやファイルダウンロードリンクを描画します。
+
+既存のテキスト専用データをこの構造に移行する場合は、厳格なスキーマをデプロイする前に一度だけ以下を実行してください。
+
+```bash
+npx convex run internal.maintenance.migrations.migrateRichMessaging
+```
+
+Convex の署名付き URL は自動で失効します。タイムラインクエリはビューのマウント時に再取得するため、オペレーターが最新リンクを常に受け取れます。
+
+### 手動確認チェックリスト
+
+LINE Messaging API のテストコンソールやサンドボックスアカウントを使って以下を確認します。
+
+1. `npm run dev` で開発環境を起動し、`convex dev` と Vite が正常に動作していることを確認する。
+2. LINE からテキストメッセージを送信し、タイムラインとコンタクトサイドバーが更新されることを確認する。
+3. 画像と PDF（ファイルメッセージ）を送信し、画像はプレビュー、ファイルはダウンロードリンクとして表示されることを確認する。
+4. 音声または動画を送信し、バブル内で `<audio>`/`<video>` プレーヤーが再生できることを確認する。
+5. Convex ダッシュボード（または `npx convex dashboard`）で Storage を確認し、バイナリアセットが保存・紐付けされていることを確認する。
+6. チャット UI から返信を送り、Push 失敗時にのみ「再送」ボタンが表示されることを確認する。

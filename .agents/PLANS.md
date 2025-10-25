@@ -161,7 +161,7 @@ Milestone 1 establishes the schema and backend storage model for rich message co
 - [x] (2025-10-16 07:05Z) Updated Convex mutations/actions to the new schema, introduced `messageDeliveries` retries, refreshed webhook/user-state logic, and migrated legacy data via `internal.maintenance.migrations.migrateRichMessaging`.
 - [x] (2025-10-16 07:45Z) Added LINE media ingestion pipeline (`convex/line/content.ts`), stored incoming media/sticker/location messages with rich metadata, and updated webhook persistence accordingly.
 - [x] (2025-10-16 08:25Z) Surfaced media in the UI via timeline query, storage URLs, and chat bubble previews for images/video/audio/files.
-- [ ] (2025-10-16 08:25Z) Update README(ja/en) with rich media workflow and outline manual verification steps.
+- [x] (2025-10-16 08:40Z) Updated README(ja/en) with rich media workflow details and manual verification checklist.
 - [ ] (2025-10-16 05:20Z) Adapt React chat components to consume the new message model.
 - [ ] (2025-10-16 05:20Z) Run validation steps, capture evidence, and update documentation.
 
