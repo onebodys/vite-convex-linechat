@@ -59,10 +59,12 @@ export async function deliverTextMessage({
   });
 
   try {
-    await client.pushMessage({
+    const response = await client.pushMessage({
       to: lineUserId,
       messages: [{ type: "text", text }],
     });
+
+    const sent = response.sentMessages?.[0];
 
     await ctx.runMutation(internal.line.message_deliveries.completeDeliveryAttempt, {
       deliveryAttemptId,
@@ -75,6 +77,8 @@ export async function deliverTextMessage({
       messageId,
       status: "sent",
       deliveryState: null,
+      ...(sent?.id ? { lineMessageId: sent.id } : {}),
+      ...(sent?.quoteToken ? { quoteToken: sent.quoteToken } : {}),
       updatedAt: attemptTimestamp,
     });
 

@@ -46,6 +46,13 @@ const messageContent = v.union(
   }),
 );
 
+const quotedMessageInfo = v.object({
+  lineMessageId: v.optional(v.string()),
+  displayName: v.optional(v.string()),
+  text: v.optional(v.string()),
+  messageType: v.optional(v.string()),
+});
+
 const lineRelationshipStatus = v.union(
   v.literal("following"),
   v.literal("blocked"),
@@ -83,10 +90,13 @@ export default defineSchema({
     replyToken: v.optional(v.string()),
     createdAt: v.number(),
     updatedAt: v.number(),
+    quotedMessage: v.optional(quotedMessageInfo),
+    quoteToken: v.optional(v.string()),
   })
     .index("byUserCreatedAt", ["lineUserId", "createdAt"])
     .index("byLineUserDirectionCreatedAt", ["lineUserId", "direction", "createdAt"])
-    .index("byStatus", ["status"]),
+    .index("byStatus", ["status"])
+    .index("byLineMessageId", ["lineMessageId"]),
   messageDeliveries: defineTable({
     messageId: v.id("messages"),
     attempt: v.number(),

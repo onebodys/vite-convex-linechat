@@ -31,6 +31,20 @@ export function ChatMessageBubble({
   const status = message.status;
   const content = message.content;
 
+  const quotedPreview = (() => {
+    const quoted = message.quotedMessage;
+    if (!quoted) {
+      return undefined;
+    }
+
+    const fallbackLabel = quoted.messageType ? `[${quoted.messageType}]` : "[引用メッセージ]";
+
+    return {
+      displayName: quoted.displayName ?? "返信元",
+      text: quoted.text ?? fallbackLabel,
+    };
+  })();
+
   const handleRetry = () => {
     if (!onRetry) {
       return;
@@ -132,7 +146,22 @@ export function ChatMessageBubble({
             isAgent ? "ml-auto bg-primary text-primary-foreground" : "bg-white text-foreground",
           )}
         >
-          {renderContent()}
+          <div className="space-y-2">
+            {quotedPreview ? (
+              <div
+                className={cn(
+                  "rounded-2xl border px-3 py-2 text-xs",
+                  isAgent
+                    ? "border-white/40 bg-white/10 text-primary-foreground/80"
+                    : "border-muted bg-muted/40 text-muted-foreground",
+                )}
+              >
+                <p className="font-medium">{quotedPreview.displayName}</p>
+                <p className="line-clamp-2 whitespace-pre-line">{quotedPreview.text}</p>
+              </div>
+            ) : null}
+            {renderContent()}
+          </div>
         </div>
         <div
           className={cn(

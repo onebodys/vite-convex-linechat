@@ -57,6 +57,14 @@ export const persistIncomingMessage = internalMutation({
     content: messageContent,
     replyToken: v.optional(v.string()),
     timestamp: v.number(),
+    quotedMessage: v.optional(
+      v.object({
+        lineMessageId: v.optional(v.string()),
+        displayName: v.optional(v.string()),
+        text: v.optional(v.string()),
+        messageType: v.optional(v.string()),
+      }),
+    ),
   },
   handler: async (ctx, args) => {
     await ctx.db.insert("messages", {
@@ -68,6 +76,7 @@ export const persistIncomingMessage = internalMutation({
       replyToken: args.replyToken,
       createdAt: args.timestamp,
       updatedAt: args.timestamp,
+      quotedMessage: args.quotedMessage,
     });
   },
 });
@@ -109,6 +118,7 @@ export const updateMessageLifecycle = internalMutation({
     deliveryState: v.optional(nullableDeliveryState),
     lineMessageId: v.optional(nullableString),
     replyToken: v.optional(nullableString),
+    quoteToken: v.optional(nullableString),
     updatedAt: v.number(),
   },
   handler: async (ctx, args) => {
@@ -128,6 +138,10 @@ export const updateMessageLifecycle = internalMutation({
 
     if (args.replyToken !== undefined) {
       patch.replyToken = args.replyToken ?? undefined;
+    }
+
+    if (args.quoteToken !== undefined) {
+      patch.quoteToken = args.quoteToken ?? undefined;
     }
 
     await ctx.db.patch(args.messageId, patch);
@@ -163,6 +177,48 @@ export const getMessageById = internalQuery({
   },
   handler: async (ctx, { messageId }) => {
     return ctx.db.get(messageId);
+  },
+});
+
+export const resolveQuoteByLineMessageId = internalQuery({
+  args: {
+    lineMessageId: v.string(),
+  },
+  handler: async (ctx, { lineMessageId }) => {
+    const message = await ctx.db
+      .query("messages")
+      .withIndex("byLineMessageId", (q) => q.eq("lineMessageId", lineMessageId))
+      .first();
+
+    if (!message) {
+      return null;
+    }
+
+    let displayName: string | undefined;
+
+    if (message.direction === "outgoing") {
+      displayName = "オペレーター";
+    } else {
+      const state = await ctx.db
+        .query("lineUserStates")
+        .withIndex("byLineUserId", (q) => q.eq("lineUserId", message.lineUserId))
+        .first();
+      displayName = state?.displayName ?? "LINE ユーザー";
+    }
+
+    const text =
+      message.content.kind === "text"
+        ? message.content.text
+        : message.content.kind === "template"
+          ? message.content.altText
+          : (message.content.fileName ?? `[${message.content.mediaType}]`);
+
+    return {
+      lineMessageId,
+      displayName,
+      text,
+      messageType: message.content.kind,
+    };
   },
 });
 
@@ -210,10 +266,7 @@ export const listTimelineByLineUser = query({
           };
         }
 
-        return {
-          message: doc,
-          media,
-        };
+        return { message: doc, media };
       }),
     );
 

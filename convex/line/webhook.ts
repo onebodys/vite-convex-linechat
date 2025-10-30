@@ -109,6 +109,76 @@ export const webhook = httpAction(async (ctx, request) => {
     });
   };
 
+  /**
+   * @description LINE Webhook のメッセージオブジェクトから引用情報を整形し、欠けている場合は自前の履歴で補完する。
+   * LINE 側は `quotedMessage` 全体を送ってくれる場合と、`quotedMessageId` のみを送る場合があるため、
+   * いったん下書き (drafted) を作ってから不足分を埋めるようにしている。
+   */
+  const buildQuotedMessage = async (
+    message: MessageEvent["message"],
+  ): Promise<
+    | {
+        lineMessageId?: string;
+        displayName?: string;
+        text?: string;
+        messageType?: string;
+      }
+    | undefined
+  > => {
+    // drafted: まず LINE から渡された値だけで構成した暫定オブジェクト。
+    // この段階で text/displayName が揃っていればそれを返し、未指定なら後続で履歴から補完する。
+    let drafted: {
+      lineMessageId?: string;
+      displayName?: string;
+      text?: string;
+      messageType?: string;
+    } | null = null;
+
+    if ("quotedMessage" in message && message.quotedMessage) {
+      const quoted = message.quotedMessage as Record<string, unknown>;
+      drafted = {
+        lineMessageId: typeof quoted.id === "string" ? quoted.id : undefined,
+        displayName:
+          typeof quoted.displayName === "string"
+            ? quoted.displayName
+            : typeof quoted.userId === "string"
+              ? quoted.userId
+              : undefined,
+        text: typeof quoted.text === "string" ? quoted.text : undefined,
+        messageType: typeof quoted.type === "string" ? quoted.type : undefined,
+      };
+    } else if ("quotedMessageId" in message && typeof message.quotedMessageId === "string") {
+      drafted = {
+        lineMessageId: message.quotedMessageId,
+        messageType:
+          "quotedMessageType" in message && typeof message.quotedMessageType === "string"
+            ? message.quotedMessageType
+            : undefined,
+      };
+    }
+
+    // lineMessageId が無い場合は、これ以上照合できないので drafted か undefined をそのまま返す。
+    if (!drafted || !drafted.lineMessageId) {
+      return drafted ?? undefined;
+    }
+
+    const resolved = await ctx.runQuery(internal.line.messages.resolveQuoteByLineMessageId, {
+      lineMessageId: drafted.lineMessageId,
+    });
+
+    // DB に保存済みのメッセージがあれば、本文や表示名を補完する。
+    if (!resolved) {
+      return drafted;
+    }
+
+    return {
+      lineMessageId: drafted.lineMessageId ?? resolved.lineMessageId,
+      displayName: drafted.displayName ?? resolved.displayName,
+      text: drafted.text ?? resolved.text,
+      messageType: drafted.messageType ?? resolved.messageType,
+    };
+  };
+
   const { events = [] } = JSON.parse(body) as WebhookRequestBody;
 
   for (const event of events as WebhookEvent[]) {
@@ -119,7 +189,6 @@ export const webhook = httpAction(async (ctx, request) => {
 
     const followIsUnblocked = extractFollowIsUnblocked(followEvent);
     let payloadSummary: string | undefined;
-    let handledMessage = false;
 
     if (event.type === "message" && lineUserId) {
       const messageEvent = event as MessageEvent;
@@ -127,6 +196,7 @@ export const webhook = httpAction(async (ctx, request) => {
         summarizeIncomingMessage(messageEvent);
       const message = messageEvent.message;
       let content: IncomingContent;
+      const quotedMessage = await buildQuotedMessage(message);
 
       if (message.type === "text") {
         content = {
@@ -205,6 +275,7 @@ export const webhook = httpAction(async (ctx, request) => {
         content,
         replyToken,
         timestamp: messageEvent.timestamp,
+        quotedMessage,
       });
 
       await ctx.runMutation(internal.line.events.applyEventToUserState, {
@@ -219,7 +290,6 @@ export const webhook = httpAction(async (ctx, request) => {
       });
 
       payloadSummary = clampedSummary;
-      handledMessage = true;
     }
 
     await ctx.runMutation(internal.line.events.recordWebhookEvent, {
@@ -236,7 +306,7 @@ export const webhook = httpAction(async (ctx, request) => {
       payloadSummary,
     });
 
-    if (handledMessage) {
+    if (event.type === "message") {
       continue;
     }
 
