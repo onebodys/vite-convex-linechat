@@ -7,6 +7,7 @@ import { internal } from "../_generated/api";
 import type { Id } from "../_generated/dataModel";
 import { action, internalAction } from "../_generated/server";
 import { deliverTextMessage } from "./message_delivery";
+import { ensureOutgoingTextContent } from "./message_helpers";
 import { getMessagingClient } from "./messaging_client";
 
 export const doValidateSignature = internalAction({
@@ -111,19 +112,13 @@ export const resendTextMessage = action({
       throw new Error("Message is not in a failed state");
     }
 
-    const content =
-      message.content ??
-      ("text" in message ? { kind: "text" as const, text: message.text ?? "" } : undefined);
-
-    if (!content || content.kind !== "text") {
-      throw new Error("Only text messages can be resent with this action");
-    }
+    const { text } = ensureOutgoingTextContent(message);
 
     await deliverTextMessage({
       ctx,
       messageId,
       lineUserId: message.lineUserId,
-      text: content.text,
+      text,
       isRedelivery: true,
       retryStrategy: "manual",
     });

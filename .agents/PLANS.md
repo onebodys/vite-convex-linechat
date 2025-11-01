@@ -247,3 +247,75 @@ While implementing, capture short terminal snippets showing Convex inserts, retr
 
 Use the existing `@line/bot-sdk` client already instantiated in `convex/line/messaging_client.ts` for both `pushMessage` and `getMessageContent`. Rely on Convex Storage (`ctx.storage`) for binary payload retention and reference stored blobs by `_storage` IDs. Ensure React components fetch binary URIs through Convex-provided URLs instead of embedding tokens. No additional npm dependencies are expected beyond those already present; if new types are needed, define them locally to keep the plan self-contained.
 ```
+
+```md
+# ExecPlan: LINE Chat Refactor & Tidying
+
+This ExecPlan is a living document. The sections `Progress`, `Surprises & Discoveries`, `Decision Log`, and `Outcomes & Retrospective` must be kept up to date as work proceeds. Maintain this plan in accordance with `.agents/PLANS.md` in the repository root.
+
+## Purpose / Big Picture
+
+The rich media feature set introduced powerful capabilities but left duplicated validators, ad-hoc timeline shaping, and fragile casting across the Convex backend and the React chat surface. This refactoring plan tidies the code so that message schemas, delivery helpers, and UI renderers rely on a single source of truth, reducing drift and making future message types or delivery policies cheaper to add.
+
+## Milestones
+
+Milestone 1 centralises message schema primitives and TypeScript exports so Convex schema definitions, runtime mutations, and downstream consumers reuse the same unions and validators. Milestone 2 streamlines delivery and timeline helpers, eliminating repeated text-extraction and query logic by introducing reusable utilities for outgoing messages and summary generation. Milestone 3 aligns the frontend with these shared types, replacing assertion casts with validation, reducing memo churn, and decomposing bubble rendering so media handling stays cohesive.
+
+## Progress
+
+- [x] (2025-11-01 18:12Z) Catalogued duplicated message validators across `convex/schema.ts` and `convex/line/messages.ts`, confirming targets for consolidation.
+- [x] (2025-11-01 18:55Z) Introduced `convex/lib/message_model.ts` and `convex/line/message_helpers.ts`, refactoring actions/tasks/delivery modules to consume the shared helpers.
+- [x] (2025-11-01 19:35Z) Added `shared/timeline-entry.ts`, updated chat hooks/components to rely on shared timeline parsing, and confirmed `npm run build` succeeds.
+
+## Surprises & Discoveries
+
+- Observation: `npm run lint` scans `dist/` outputs and emits thousands of legacy style diagnostics, causing the task to time out. Evidence: 2025-11-01 run stopped after ~24s showing 2933 errors rooted in `dist/assets/index-*.js`. Until Biome ignores build artifacts, scope linting to touched source files for interim verification.
+
+## Decision Log
+
+- Decision: Introduce `convex/lib/message_model.ts` as the single source for message unions, enums, and retry strategies, exporting typed helpers for both schema construction and runtime guards. Rationale: keeping schema definitions and runtime modules aligned prevents subtle validator drift that previously required manual syncs. Date/Author: 2025-11-01 / Codex.
+- Decision: Provide an `ensureOutgoingTextContent` helper within `convex/line/message_helpers.ts` that derives text bodies and summaries for retries, resends, and quote payloads. Rationale: consolidating this fallback logic removes repeated inline checks across `actions.ts`, `tasks.ts`, and `messages.ts`, improving resilience when adding non-text message kinds. Date/Author: 2025-11-01 / Codex.
+
+## Scope Boundaries
+
+This plan restricts itself to refactoring and tidying. It does not introduce new LINE message types, change delivery scheduling behaviour, or run destructive migrations against production datasets. Any data shape updates are limited to re-exporting existing validators and ensuring downstream modules import them consistently.
+
+## Detailed Design
+
+### Milestone 1 – Shared message schema primitives
+
+Create `convex/lib/message_model.ts` containing the `messageStatus`, `messageDeliveryState`, `mediaContentType`, `messageContent`, `quotedMessageInfo`, `retryStrategy`, and `deliveryStatusSnapshot` validators plus derived TypeScript types. Update `convex/schema.ts` to import these definitions instead of redeclaring them, keeping table definitions otherwise intact. Adjust `convex/line/messages.ts` and any other module that currently clones the same unions to import from the shared module, ensuring the Convex runtime can tree-shake static values. Export a lightweight `createMessageSummary` helper alongside the validators so downstream code stops hand-rolling truncation logic.
+
+### Milestone 2 – Delivery and timeline helpers
+
+Add `convex/line/message_helpers.ts` to expose functions such as `ensureOutgoingTextContent`, `summarizeContentForLog`, and `listMessagesOrdered` (wrapping the common query pattern used by `listByLineUser` and `listTimelineByLineUser`). Refactor `convex/line/actions.ts`, `convex/line/tasks.ts`, and `convex/line/messages.ts` to call these helpers, removing inline unions and duplicated limit clamping. Move `clampSummary` and retry backoff calculations into the helpers module so `convex/line/message_delivery.ts` and the retry task share the same retry math. Update the timeline query to rely on `listMessagesOrdered` before attaching storage URLs, reducing duplicated reversing logic and ensuring both list functions honour the same pagination rules.
+
+### Milestone 3 – Frontend timeline normalisation
+
+Publish a shared `shared/timeline-entry.ts` Zod schema that mirrors the server timeline payload (referencing the types exported from `convex/lib/message_model.ts`). Update `src/components/chat/hooks/use-line-messages.ts` to validate the query result instead of casting with `as TimelineEntry[]`, returning typed data and logging validation failures once. Move `mapLineUserToContact` and related utilities into `src/lib/chat/normalizers.ts` so the mapping logic can be reused by future views, and add unit coverage in `src/components/chat/utils.test.ts` for both valid and legacy states. Refactor `src/components/chat/chat-message-bubble.tsx` to delegate media rendering to a small `ChatMessageMedia` component that handles each media kind declaratively, reducing nested conditionals and making it easy to extend once new content types arrive.
+
+## Concrete Steps
+
+Run these commands from the repository root after each milestone (and once more before handing off):
+
+    npm run lint
+    npm run build
+    npm run knip
+    npx convex dev --once
+
+## Validation and Acceptance
+
+Successful completion requires lint, build, knip, and Convex typechecks to pass with no new warnings. Manually resend a failed outbound message through the UI to confirm the refactored helpers still drive retries, and verify that chat bubbles render text and media exactly as before. Ensure the contact sidebar continues to show last message summaries sourced from the shared helper.
+
+## Idempotence and Recovery
+
+The refactor introduces no schema migrations and operates purely at the code level. If a change misbehaves, reverting the touched modules restores prior behaviour without data repair. The shared helper modules can be safely re-imported multiple times because they only export constants and pure functions.
+
+## Artifacts and Notes
+
+Capture short `rg` transcripts before and after to demonstrate that message validator definitions now resolve from the shared module, and include screenshots or GIFs showing the chat timeline rendering text and media unchanged post-refactor. When adjusting unit tests, note the scenarios covered so future contributors know which regressions are guarded.
+
+## Interfaces and Dependencies
+
+Continue using Convex-provided helpers (`convex/server`, `convex/values`) and existing `@line/bot-sdk` clients. The new shared modules should avoid introducing third-party dependencies; rely on built-in Node APIs and `zod` (already in the workspace) for runtime validation. Surface any additional helper exports via index files if other packages need them in the future.
+```

@@ -1,57 +1,15 @@
 import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
-
-const messageStatus = v.union(
-  v.literal("pending"),
-  v.literal("sent"),
-  v.literal("failed"),
-  v.literal("canceled"),
-);
-
-const messageDeliveryState = v.union(v.literal("queued"), v.literal("delivering"));
+import {
+  deliveryStatusSnapshot,
+  messageContent,
+  messageDeliveryState,
+  messageStatus,
+  quotedMessageInfo,
+  retryStrategy,
+} from "./lib/message_model";
 
 const messageDirection = v.union(v.literal("incoming"), v.literal("outgoing"));
-
-const mediaContentType = v.union(
-  v.literal("image"),
-  v.literal("video"),
-  v.literal("audio"),
-  v.literal("file"),
-  v.literal("sticker"),
-);
-
-const messageContent = v.union(
-  v.object({
-    kind: v.literal("text"),
-    text: v.string(),
-  }),
-  v.object({
-    kind: v.literal("media"),
-    mediaType: mediaContentType,
-    lineContentId: v.optional(v.string()),
-    storageId: v.optional(v.id("_storage")),
-    previewStorageId: v.optional(v.id("_storage")),
-    fileName: v.optional(v.string()),
-    mimeType: v.optional(v.string()),
-    sizeBytes: v.optional(v.number()),
-    durationMs: v.optional(v.number()),
-    width: v.optional(v.number()),
-    height: v.optional(v.number()),
-  }),
-  v.object({
-    kind: v.literal("template"),
-    templateType: v.string(),
-    altText: v.string(),
-    payload: v.string(),
-  }),
-);
-
-const quotedMessageInfo = v.object({
-  lineMessageId: v.optional(v.string()),
-  displayName: v.optional(v.string()),
-  text: v.optional(v.string()),
-  messageType: v.optional(v.string()),
-});
 
 const lineRelationshipStatus = v.union(
   v.literal("following"),
@@ -67,15 +25,7 @@ const deliveryAttemptStatus = v.union(
   v.literal("failed"),
 );
 
-const retryStrategy = v.union(v.literal("immediate"), v.literal("backoff"), v.literal("manual"));
-
 const eventSource = v.union(v.literal("webhook"), v.literal("push"), v.literal("system"));
-
-const deliveryStatusSnapshot = v.union(
-  v.literal("pending"),
-  v.literal("success"),
-  v.literal("failed"),
-);
 
 const messagePreviewType = v.union(v.literal("text"), v.literal("media"), v.literal("template"));
 

@@ -4,9 +4,9 @@ import { HTTPFetchError } from "@line/bot-sdk";
 import { internal } from "../_generated/api";
 import type { Id } from "../_generated/dataModel";
 import type { ActionCtx } from "../_generated/server";
+import type { RetryStrategy } from "../lib/message_model";
+import { computeNextRetry, summarizeTextBody } from "./message_helpers";
 import { getMessagingClient } from "./messaging_client";
-
-type RetryStrategy = "immediate" | "backoff" | "manual";
 
 type DeliverTextMessageParams = {
   ctx: ActionCtx;
@@ -16,20 +16,6 @@ type DeliverTextMessageParams = {
   isRedelivery: boolean;
   retryStrategy: RetryStrategy;
 };
-
-// LINE API 再送間隔の最小値と上限（指数バックオフ）
-const BASE_BACKOFF_MS = 30_000;
-const MAX_BACKOFF_MS = 5 * 60_000;
-
-// 次回リトライ時刻を計算する（指数バックオフ + 上限）
-const computeNextRetry = (attempts: number, now: number) => {
-  const exponent = Math.max(attempts - 1, 0);
-  const delay = Math.min(BASE_BACKOFF_MS * 2 ** exponent, MAX_BACKOFF_MS);
-  return now + delay;
-};
-
-const clampSummary = (value: string, max = 140) =>
-  value.length > max ? value.slice(0, max) : value;
 
 export async function deliverTextMessage({
   ctx,
@@ -82,7 +68,7 @@ export async function deliverTextMessage({
       updatedAt: attemptTimestamp,
     });
 
-    const summary = clampSummary(text);
+    const summary = summarizeTextBody(text);
 
     await ctx.runMutation(internal.line.events.applyEventToUserState, {
       lineUserId,
@@ -148,7 +134,7 @@ export async function deliverTextMessage({
       eventType: "push_message_failed",
       timestamp: attemptTimestamp,
       lineUserId,
-      payloadSummary: clampSummary(text),
+      payloadSummary: summarizeTextBody(text),
       deliveryStatusSnapshot: "failed",
       errorMessage,
       nextRetryAt,

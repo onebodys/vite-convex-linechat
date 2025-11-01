@@ -1,48 +1,11 @@
 import { v } from "convex/values";
 import { internalMutation, internalQuery, query } from "../_generated/server";
-
-const messageStatus = v.union(
-  v.literal("pending"),
-  v.literal("sent"),
-  v.literal("failed"),
-  v.literal("canceled"),
-);
-
-const messageDeliveryState = v.union(v.literal("queued"), v.literal("delivering"));
-
-const mediaContentType = v.union(
-  v.literal("image"),
-  v.literal("video"),
-  v.literal("audio"),
-  v.literal("file"),
-  v.literal("sticker"),
-);
-
-const messageContent = v.union(
-  v.object({
-    kind: v.literal("text"),
-    text: v.string(),
-  }),
-  v.object({
-    kind: v.literal("media"),
-    mediaType: mediaContentType,
-    lineContentId: v.optional(v.string()),
-    storageId: v.optional(v.id("_storage")),
-    previewStorageId: v.optional(v.id("_storage")),
-    fileName: v.optional(v.string()),
-    mimeType: v.optional(v.string()),
-    sizeBytes: v.optional(v.number()),
-    durationMs: v.optional(v.number()),
-    width: v.optional(v.number()),
-    height: v.optional(v.number()),
-  }),
-  v.object({
-    kind: v.literal("template"),
-    templateType: v.string(),
-    altText: v.string(),
-    payload: v.string(),
-  }),
-);
+import {
+  messageContent,
+  messageDeliveryState,
+  messageStatus,
+  quotedMessageInfo,
+} from "../lib/message_model";
 
 const nullableDeliveryState = v.union(messageDeliveryState, v.null());
 const nullableString = v.union(v.string(), v.null());
@@ -57,14 +20,7 @@ export const persistIncomingMessage = internalMutation({
     content: messageContent,
     replyToken: v.optional(v.string()),
     timestamp: v.number(),
-    quotedMessage: v.optional(
-      v.object({
-        lineMessageId: v.optional(v.string()),
-        displayName: v.optional(v.string()),
-        text: v.optional(v.string()),
-        messageType: v.optional(v.string()),
-      }),
-    ),
+    quotedMessage: v.optional(quotedMessageInfo),
   },
   handler: async (ctx, args) => {
     await ctx.db.insert("messages", {

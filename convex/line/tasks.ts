@@ -4,6 +4,7 @@ import { v } from "convex/values";
 import { internal } from "../_generated/api";
 import { internalAction } from "../_generated/server";
 import { deliverTextMessage } from "./message_delivery";
+import { ensureOutgoingTextContent } from "./message_helpers";
 
 // scheduler から呼ばれ、再送条件を満たしたメッセージを順次処理する
 export const retryFailedMessages = internalAction({
@@ -28,12 +29,12 @@ export const retryFailedMessages = internalAction({
         continue;
       }
 
-      const content =
-        message.content ??
-        ("text" in message ? { kind: "text" as const, text: message.text ?? "" } : undefined);
-
-      if (!content || content.kind !== "text") {
-        console.warn("retryFailedMessages: unsupported content kind", content?.kind ?? "unknown");
+      let textBody: string;
+      try {
+        const { text } = ensureOutgoingTextContent(message);
+        textBody = text;
+      } catch (error) {
+        console.warn("retryFailedMessages: unsupported content kind", (error as Error).message);
         continue;
       }
 
@@ -42,7 +43,7 @@ export const retryFailedMessages = internalAction({
           ctx,
           messageId: message._id,
           lineUserId: message.lineUserId,
-          text: content.text,
+          text: textBody,
           isRedelivery: true,
           retryStrategy: "backoff",
         });

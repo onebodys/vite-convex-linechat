@@ -14,11 +14,13 @@ import type {
   FunctionReference,
 } from "convex/server";
 import type * as http from "../http.js";
+import type * as lib_message_model from "../lib/message_model.js";
 import type * as line_actions from "../line/actions.js";
 import type * as line_content from "../line/content.js";
 import type * as line_events from "../line/events.js";
 import type * as line_message_deliveries from "../line/message_deliveries.js";
 import type * as line_message_delivery from "../line/message_delivery.js";
+import type * as line_message_helpers from "../line/message_helpers.js";
 import type * as line_messages from "../line/messages.js";
 import type * as line_messaging_client from "../line/messaging_client.js";
 import type * as line_tasks from "../line/tasks.js";
@@ -37,11 +39,13 @@ import type * as scheduler from "../scheduler.js";
  */
 declare const fullApi: ApiFromModules<{
   http: typeof http;
+  "lib/message_model": typeof lib_message_model;
   "line/actions": typeof line_actions;
   "line/content": typeof line_content;
   "line/events": typeof line_events;
   "line/message_deliveries": typeof line_message_deliveries;
   "line/message_delivery": typeof line_message_delivery;
+  "line/message_helpers": typeof line_message_helpers;
   "line/messages": typeof line_messages;
   "line/messaging_client": typeof line_messaging_client;
   "line/tasks": typeof line_tasks;

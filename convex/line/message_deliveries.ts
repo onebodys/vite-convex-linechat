@@ -1,7 +1,6 @@
 import { v } from "convex/values";
 import { internalMutation, internalQuery } from "../_generated/server";
-
-const retryStrategy = v.union(v.literal("immediate"), v.literal("backoff"), v.literal("manual"));
+import { retryStrategy } from "../lib/message_model";
 
 export const createDeliveryAttempt = internalMutation({
   args: {

@@ -1,4 +1,4 @@
-import type { Doc } from "../../../convex/_generated/dataModel";
+import type { TimelineEntry as SharedTimelineEntry } from "../../../shared/timeline-entry";
 
 /**
  * @description サイドバーに表示する連絡先情報。
@@ -17,15 +17,6 @@ export type Contact = {
 };
 
 /**
- * @description タイムライン表示用のメッセージと添付メディアのセット。
+ * @description タイムライン表示用のメッセージと添付メディアのセット。sharedモジュールの定義を再利用する。
  */
-export type TimelineEntry = {
-  message: Doc<"messages">;
-  media?: {
-    mediaType: "image" | "video" | "audio" | "file" | "sticker";
-    url?: string;
-    fileName?: string;
-    mimeType?: string;
-    sizeBytes?: number;
-  };
-};
+export type TimelineEntry = SharedTimelineEntry;

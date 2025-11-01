@@ -1,6 +1,7 @@
 import { useQuery } from "convex/react";
 import { useMemo } from "react";
 import { api } from "../../../../convex/_generated/api";
+import { parseTimelineEntries } from "../../../../shared/timeline-entry";
 import type { TimelineEntry } from "../types";
 
 /**
@@ -13,10 +14,15 @@ export function useLineMessages(lineUserId: string | null) {
   );
 
   const normalized = useMemo<TimelineEntry[]>(() => {
-    if (!messages) {
+    if (messages === undefined || messages === null) {
       return [];
     }
-    return messages as TimelineEntry[];
+    try {
+      return parseTimelineEntries(messages);
+    } catch (error) {
+      console.warn("Invalid timeline entries", error);
+      return [];
+    }
   }, [messages]);
 
   return {

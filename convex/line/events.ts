@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { internalMutation } from "../_generated/server";
+import { deliveryStatusSnapshot } from "../lib/message_model";
 
 const profileShape = v.object({
   displayName: v.optional(v.string()),
@@ -13,12 +14,6 @@ type ChannelMode = "active" | "standby" | "unknown";
 type RelationshipStatus = "following" | "blocked" | "unknown";
 
 const messagePreviewType = v.union(v.literal("text"), v.literal("media"), v.literal("template"));
-
-const deliveryStatusSnapshot = v.union(
-  v.literal("pending"),
-  v.literal("success"),
-  v.literal("failed"),
-);
 
 const normalizeMode = (mode?: string | null): ChannelMode => {
   if (mode === "active" || mode === "standby") {
