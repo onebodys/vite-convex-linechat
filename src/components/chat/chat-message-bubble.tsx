@@ -137,21 +137,30 @@ export const ChatMessageBubble = forwardRef<HTMLDivElement, ChatMessageBubblePro
     return (
       <div
         ref={ref}
-        className={cn("flex gap-3", isAgent ? "flex-row-reverse" : "flex-row")}
+        className={cn("flex items-end gap-3", isAgent ? "flex-row-reverse" : "flex-row")}
         data-side={isAgent ? "agent" : "customer"}
       >
-        <div className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-muted text-sm font-medium text-muted-foreground">
-          {isAgent ? "OP" : "GU"}
+        <div
+          className={cn(
+            "flex size-9 shrink-0 items-center justify-center rounded-full border text-[11px] font-semibold",
+            isAgent
+              ? "border-emerald-200 bg-emerald-50 text-emerald-600"
+              : "border-slate-200 bg-white text-slate-500",
+          )}
+        >
+          {isAgent ? "OP" : "友"}
         </div>
         <div
-          className={cn("max-w-[70%] space-y-2", isAgent && "items-end text-right")}
+          className={cn("flex max-w-[70%] flex-col gap-1", isAgent && "items-end text-right")}
           data-side={isAgent ? "agent" : "customer"}
         >
           <div
             className={cn(
-              "rounded-3xl px-4 py-3 text-sm leading-relaxed shadow-sm",
-              isAgent ? "ml-auto bg-primary text-primary-foreground" : "bg-white text-foreground",
-              isHighlighted && "animate-bubble-shake ring-2 ring-primary/60",
+              "w-full rounded-3xl border px-4 py-3 text-sm leading-relaxed shadow-sm",
+              isAgent
+                ? "ml-auto border-[#b6e6b5] bg-[#d6f5d3] text-slate-800"
+                : "border-[#e1e5ec] bg-[#f2f4f7] text-slate-800",
+              isHighlighted && "animate-bubble-shake ring-2 ring-emerald-200",
             )}
           >
             <div className="space-y-2">
@@ -163,8 +172,8 @@ export const ChatMessageBubble = forwardRef<HTMLDivElement, ChatMessageBubblePro
                   className={cn(
                     "w-full rounded-2xl border px-3 py-2 text-left text-xs transition",
                     isAgent
-                      ? "border-white/40 bg-white/10 text-primary-foreground/80 hover:bg-white/20 disabled:opacity-60"
-                      : "border-muted bg-muted/40 text-muted-foreground hover:bg-muted/70 disabled:opacity-60",
+                      ? "border-emerald-200 bg-white/70 text-emerald-700 hover:bg-white disabled:opacity-60"
+                      : "border-slate-200 bg-white text-slate-500 hover:bg-slate-50 disabled:opacity-60",
                   )}
                 >
                   <p className="font-medium">{quotedPreview.displayName}</p>
@@ -176,7 +185,7 @@ export const ChatMessageBubble = forwardRef<HTMLDivElement, ChatMessageBubblePro
           </div>
           <div
             className={cn(
-              "flex items-center gap-2 text-xs text-muted-foreground",
+              "flex items-center gap-2 text-[11px] text-slate-400",
               isAgent && "justify-end",
             )}
           >
@@ -189,7 +198,7 @@ export const ChatMessageBubble = forwardRef<HTMLDivElement, ChatMessageBubblePro
                     type="button"
                     variant="outline"
                     size="sm"
-                    className="h-7 px-3 text-xs"
+                    className="h-7 rounded-full border-slate-300 px-3 text-[11px]"
                     onClick={handleRetry}
                     disabled={isRetrying}
                   >
@@ -213,7 +222,7 @@ type MessageStatus = TimelineEntry["message"]["status"];
 function StatusIndicator({ status }: { status: MessageStatus }) {
   if (status === "sent") {
     return (
-      <span className="inline-flex items-center gap-1">
+      <span className="inline-flex items-center gap-1 text-emerald-600">
         <BadgeCheck className="size-3" />
         送信済み
       </span>
@@ -221,7 +230,7 @@ function StatusIndicator({ status }: { status: MessageStatus }) {
   }
   if (status === "pending") {
     return (
-      <span className="inline-flex items-center gap-1">
+      <span className="inline-flex items-center gap-1 text-slate-500">
         <Clock className="size-3" />
         送信中
       </span>

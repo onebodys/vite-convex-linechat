@@ -1,5 +1,5 @@
-import { Paperclip, Plus, Send, Smile } from "lucide-react";
-import type { FormEvent } from "react";
+import { ChevronDown, Paperclip, Plus, Send, Smile } from "lucide-react";
+import type { ComponentType, FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 
 export type MessageComposerProps = {
@@ -11,6 +11,9 @@ export type MessageComposerProps = {
   isSubmitting?: boolean;
 };
 
+/**
+ * @description メッセージ入力欄と送信操作を LINE クライアント風にまとめたフォーム。
+ */
 export function MessageComposer({
   onSend,
   onAttachFile,
@@ -36,62 +39,78 @@ export function MessageComposer({
   return (
     <form
       onSubmit={handleSubmit}
-      className="flex items-end gap-3 rounded-3xl border border-border/70 bg-white/90 p-3 shadow-sm"
+      className="rounded-2xl border border-slate-200 bg-white/90 p-4 shadow-[0_12px_30px_rgba(15,23,42,0.08)]"
     >
-      <div className="flex flex-col gap-2">
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          className="rounded-2xl"
-          onClick={onAttachFile}
-          disabled={disabled || isSubmitting}
-        >
-          <Paperclip className="size-5" />
-          <span className="sr-only">ファイル添付</span>
-        </Button>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          className="rounded-2xl"
-          onClick={onToggleEmoji}
-          disabled={disabled || isSubmitting}
-        >
-          <Smile className="size-5" />
-          <span className="sr-only">スタンプ</span>
-        </Button>
-      </div>
-      <label className="flex flex-1 flex-col gap-2">
-        <span className="text-xs font-medium text-muted-foreground">返信メッセージ</span>
+      <label className="flex flex-col gap-2">
+        <span className="text-xs font-semibold text-slate-500">メッセージ</span>
         <textarea
           name="message"
-          className="min-h-[96px] w-full resize-none rounded-2xl border border-border/60 bg-muted/40 px-4 py-3 text-sm text-foreground shadow-inner outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/40"
-          placeholder="メッセージを入力..."
+          className="min-h-[120px] w-full resize-none rounded-2xl border border-transparent bg-[#f5f7fb] px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-emerald-300 focus:bg-white"
+          placeholder="Enter で送信 / Shift+Enter で改行"
           disabled={disabled}
         />
-        <div className="flex items-center justify-between text-xs text-muted-foreground">
-          <span>外部公開メッセージ</span>
-          <span>Shift + Enter で改行</span>
-        </div>
       </label>
-      <div className="flex flex-col items-center gap-2">
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          className="rounded-2xl"
-          onClick={onInsertTemplate}
-          disabled={disabled || isSubmitting}
-        >
-          <Plus className="size-5" />
-          <span className="sr-only">テンプレートを挿入</span>
-        </Button>
-        <Button type="submit" className="rounded-2xl px-5" disabled={disabled || isSubmitting}>
-          {isSubmitting ? "送信中" : "送信"}
-          <Send className="ml-2 size-4" />
-        </Button>
+      <div className="mt-3 flex flex-wrap items-center justify-between gap-3 text-xs text-slate-500">
+        <div className="flex items-center gap-2">
+          <ComposerIconButton
+            icon={Paperclip}
+            label="ファイル"
+            onClick={onAttachFile}
+            disabled={disabled || isSubmitting}
+          />
+          <ComposerIconButton
+            icon={Smile}
+            label="スタンプ"
+            onClick={onToggleEmoji}
+            disabled={disabled || isSubmitting}
+          />
+          <ComposerIconButton
+            icon={Plus}
+            label="テンプレ"
+            onClick={onInsertTemplate}
+            disabled={disabled || isSubmitting}
+          />
+        </div>
+        <div className="flex items-center gap-3">
+          <span className="text-[11px]">Enter で送信 / Shift+Enter で改行</span>
+          <Button
+            type="submit"
+            className="rounded-full bg-emerald-500 px-5 text-sm font-semibold text-white hover:bg-emerald-500/90"
+            disabled={disabled || isSubmitting}
+          >
+            {isSubmitting ? "送信中" : "送信"}
+            <Send className="ml-2 size-4" />
+            <ChevronDown className="ml-1 size-4" />
+          </Button>
+        </div>
       </div>
     </form>
+  );
+}
+
+/**
+ * @description 作成フッターで使う小型アイコンボタン。
+ */
+function ComposerIconButton({
+  icon: Icon,
+  label,
+  onClick,
+  disabled,
+}: {
+  icon: ComponentType<{ className?: string }>;
+  label: string;
+  onClick?: () => void;
+  disabled?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-3 py-1 text-[11px] font-medium text-slate-600 transition hover:border-emerald-300 disabled:opacity-50"
+    >
+      <Icon className="size-3.5" />
+      {label}
+    </button>
   );
 }

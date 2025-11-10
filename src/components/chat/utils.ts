@@ -59,3 +59,18 @@ export function formatContactTag(tag: string): string {
       return tag;
   }
 }
+
+/**
+ * @description タイムラインのチップ用に「10/20(木)」形式へ整形する。
+ */
+export function formatTimelineDateLabel(timestamp: number): string {
+  if (!timestamp) {
+    return "--/--";
+  }
+
+  return new Intl.DateTimeFormat("ja-JP", {
+    month: "numeric",
+    day: "numeric",
+    weekday: "short",
+  }).format(new Date(timestamp));
+}

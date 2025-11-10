@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Id } from "../../../convex/_generated/dataModel";
 import { ChatMessageBubble } from "./chat-message-bubble";
 import type { TimelineEntry } from "./types";
+import { formatTimelineDateLabel } from "./utils";
 
 /**
  * @description タイムライン全体をスクロール表示するラッパーコンポーネント。
@@ -19,6 +20,37 @@ export function ConversationTimeline({
 }) {
   const messageRefs = useRef(new Map<string, HTMLDivElement>());
   const [highlightedLineMessageId, setHighlightedLineMessageId] = useState<string | null>(null);
+
+  const timelineBlocks = useMemo(() => {
+    const blocks: Array<
+      | {
+          kind: "marker";
+          key: string;
+          label: string;
+        }
+      | {
+          kind: "message";
+          entry: TimelineEntry;
+        }
+    > = [];
+    let lastDateKey: string | null = null;
+
+    for (const entry of messages) {
+      const createdAt = entry.message.createdAt;
+      const dateKey = new Date(createdAt).toISOString().slice(0, 10);
+      if (dateKey !== lastDateKey) {
+        blocks.push({
+          kind: "marker",
+          key: dateKey,
+          label: formatTimelineDateLabel(createdAt),
+        });
+        lastDateKey = dateKey;
+      }
+      blocks.push({ kind: "message", entry });
+    }
+
+    return blocks;
+  }, [messages]);
 
   const registerMessageRef = useCallback((key: string | undefined, node: HTMLDivElement | null) => {
     if (!key) {
@@ -56,7 +88,7 @@ export function ConversationTimeline({
 
   if (isLoading) {
     return (
-      <div className="flex-1 overflow-y-auto px-6 py-6 text-sm text-muted-foreground">
+      <div className="flex-1 overflow-y-auto bg-[#fdfdff] px-8 py-8 text-sm text-slate-500">
         メッセージを読み込み中です…
       </div>
     );
@@ -64,27 +96,29 @@ export function ConversationTimeline({
 
   if (messages.length === 0) {
     return (
-      <div className="flex flex-1 flex-col items-center justify-center gap-3 px-6 py-12 text-center text-muted-foreground">
-        <p className="text-sm text-muted-foreground/80">まだメッセージがありません。</p>
-        <p className="text-xs text-muted-foreground/60">
-          最初のメッセージを送信して会話を始めましょう。
-        </p>
+      <div className="flex flex-1 flex-col items-center justify-center gap-3 bg-[#fdfdff] px-6 py-16 text-center text-slate-400">
+        <p className="text-sm">まだメッセージがありません。</p>
+        <p className="text-xs">最初のメッセージを送信して会話を始めましょう。</p>
       </div>
     );
   }
 
   return (
-    <div className="flex-1 space-y-6 overflow-y-auto px-6 py-6">
+    <div className="flex-1 overflow-y-auto bg-[#fdfdff] px-8 py-8">
       <div className="space-y-6">
-        {messages.map((message) => {
-          const lineMessageId = message.message.lineMessageId;
+        {timelineBlocks.map((block) => {
+          if (block.kind === "marker") {
+            return <TimelineDateChip key={`marker-${block.key}`} label={block.label} />;
+          }
+
+          const lineMessageId = block.entry.message.lineMessageId;
           return (
             <ChatMessageBubble
-              key={message.message._id}
+              key={block.entry.message._id}
               ref={(node) => registerMessageRef(lineMessageId, node)}
-              entry={message}
+              entry={block.entry}
               onRetry={onRetryMessage}
-              isRetrying={retryingMessageIds?.has(message.message._id) ?? false}
+              isRetrying={retryingMessageIds?.has(block.entry.message._id) ?? false}
               isHighlighted={
                 lineMessageId !== undefined && highlightedLineMessageId === lineMessageId
               }
@@ -93,6 +127,19 @@ export function ConversationTimeline({
           );
         })}
       </div>
+    </div>
+  );
+}
+
+/**
+ * @description タイムライン内で日付区切りを表示するチップ。
+ */
+function TimelineDateChip({ label }: { label: string }) {
+  return (
+    <div className="flex justify-center">
+      <span className="rounded-full border border-slate-200 bg-white px-4 py-1 text-[11px] font-medium text-slate-400 shadow-sm">
+        {label}
+      </span>
     </div>
   );
 }
