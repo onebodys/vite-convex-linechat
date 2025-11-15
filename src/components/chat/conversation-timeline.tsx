@@ -12,11 +12,15 @@ export function ConversationTimeline({
   isLoading,
   onRetryMessage,
   retryingMessageIds,
+  participantAvatar,
+  participantName,
 }: {
   messages: TimelineEntry[];
   isLoading?: boolean;
   onRetryMessage?: (messageId: Id<"messages">) => void;
   retryingMessageIds?: Set<Id<"messages">>;
+  participantAvatar?: string;
+  participantName?: string;
 }) {
   const messageRefs = useRef(new Map<string, HTMLDivElement>());
   const [highlightedLineMessageId, setHighlightedLineMessageId] = useState<string | null>(null);
@@ -88,7 +92,7 @@ export function ConversationTimeline({
 
   if (isLoading) {
     return (
-      <div className="flex-1 overflow-y-auto bg-[#fdfdff] px-8 py-8 text-sm text-slate-500">
+      <div className="flex-1 min-h-0 overflow-y-auto bg-[#fdfdff] px-8 py-8 text-sm text-slate-500">
         メッセージを読み込み中です…
       </div>
     );
@@ -96,7 +100,7 @@ export function ConversationTimeline({
 
   if (messages.length === 0) {
     return (
-      <div className="flex flex-1 flex-col items-center justify-center gap-3 bg-[#fdfdff] px-6 py-16 text-center text-slate-400">
+      <div className="flex flex-1 min-h-0 flex-col items-center justify-center gap-3 bg-[#fdfdff] px-6 py-16 text-center text-slate-400">
         <p className="text-sm">まだメッセージがありません。</p>
         <p className="text-xs">最初のメッセージを送信して会話を始めましょう。</p>
       </div>
@@ -104,7 +108,7 @@ export function ConversationTimeline({
   }
 
   return (
-    <div className="flex-1 overflow-y-auto bg-[#fdfdff] px-8 py-8">
+    <div className="flex-1 min-h-0 overflow-y-auto bg-[#fdfdff] px-8 py-8">
       <div className="space-y-6">
         {timelineBlocks.map((block) => {
           if (block.kind === "marker") {
@@ -123,6 +127,8 @@ export function ConversationTimeline({
                 lineMessageId !== undefined && highlightedLineMessageId === lineMessageId
               }
               onQuoteNavigate={handleQuoteNavigate}
+              participantAvatar={participantAvatar}
+              participantName={participantName}
             />
           );
         })}

@@ -18,13 +18,26 @@ type ChatMessageBubbleProps = {
   isRetrying?: boolean;
   isHighlighted?: boolean;
   onQuoteNavigate?: (lineMessageId: string) => void;
+  participantAvatar?: string;
+  participantName?: string;
 };
 
 /**
  * @description チャットタイムラインの1件分を表示するバブルコンポーネント。
  */
 export const ChatMessageBubble = forwardRef<HTMLDivElement, ChatMessageBubbleProps>(
-  ({ entry, onRetry, isRetrying = false, isHighlighted = false, onQuoteNavigate }, ref) => {
+  (
+    {
+      entry,
+      onRetry,
+      isRetrying = false,
+      isHighlighted = false,
+      onQuoteNavigate,
+      participantAvatar,
+      participantName,
+    },
+    ref,
+  ) => {
     const { message, media } = entry;
     const isAgent = message.direction === "outgoing";
     const status = message.status;
@@ -134,35 +147,60 @@ export const ChatMessageBubble = forwardRef<HTMLDivElement, ChatMessageBubblePro
       return <p className="whitespace-pre-line break-words opacity-80">{content.altText}</p>;
     };
 
+    const resolvedAvatar =
+      participantAvatar ||
+      `https://api.dicebear.com/7.x/initials/svg?radius=50&seed=${encodeURIComponent(
+        participantName ?? message.lineUserId ?? "line-user",
+      )}`;
+
+    const bubbleColors = isAgent
+      ? { background: "#d6f5d3", text: "text-slate-800" }
+      : { background: "#f1f3f7", text: "text-slate-800" };
+
+    const tailClipPath = isAgent
+      ? "polygon(0% 0%, 100% 50%, 0% 100%)"
+      : "polygon(100% 0%, 0% 50%, 100% 100%)";
+
     return (
-      <div
-        ref={ref}
-        className={cn("flex items-end gap-3", isAgent ? "flex-row-reverse" : "flex-row")}
-        data-side={isAgent ? "agent" : "customer"}
-      >
+      <div ref={ref} className="flex items-start gap-3" data-side={isAgent ? "agent" : "customer"}>
+        {!isAgent ? (
+          <div className="flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-full border border-slate-200 bg-white">
+            <img
+              src={resolvedAvatar}
+              alt={participantName ?? "LINE ユーザー"}
+              className="size-full object-cover"
+            />
+          </div>
+        ) : null}
         <div
           className={cn(
-            "flex size-9 shrink-0 items-center justify-center rounded-full border text-[11px] font-semibold",
-            isAgent
-              ? "border-emerald-200 bg-emerald-50 text-emerald-600"
-              : "border-slate-200 bg-white text-slate-500",
+            "flex max-w-[70%] flex-col gap-1",
+            isAgent ? "ml-auto items-end" : "items-start",
           )}
-        >
-          {isAgent ? "OP" : "友"}
-        </div>
-        <div
-          className={cn("flex max-w-[70%] flex-col gap-1", isAgent && "items-end text-right")}
           data-side={isAgent ? "agent" : "customer"}
         >
           <div
             className={cn(
-              "w-full rounded-3xl border px-4 py-3 text-sm leading-relaxed shadow-sm",
+              "relative w-full overflow-visible rounded-3xl px-4 py-3 text-left text-sm leading-relaxed shadow-sm",
+              bubbleColors.text,
               isAgent
-                ? "ml-auto border-[#b6e6b5] bg-[#d6f5d3] text-slate-800"
-                : "border-[#e1e5ec] bg-[#f2f4f7] text-slate-800",
+                ? "shadow-[0_4px_14px_rgba(16,185,129,0.15)]"
+                : "shadow-[0_6px_18px_rgba(15,23,42,0.08)]",
               isHighlighted && "animate-bubble-shake ring-2 ring-emerald-200",
             )}
+            style={{ backgroundColor: bubbleColors.background }}
           >
+            <span
+              aria-hidden
+              className={cn(
+                "pointer-events-none absolute top-1/2 block h-4 w-3 -translate-y-1/2",
+                isAgent ? "-right-2" : "-left-2",
+              )}
+              style={{
+                clipPath: tailClipPath,
+                backgroundColor: bubbleColors.background,
+              }}
+            />
             <div className="space-y-2">
               {quotedPreview ? (
                 <button
@@ -172,7 +210,7 @@ export const ChatMessageBubble = forwardRef<HTMLDivElement, ChatMessageBubblePro
                   className={cn(
                     "w-full rounded-2xl border px-3 py-2 text-left text-xs transition",
                     isAgent
-                      ? "border-emerald-200 bg-white/70 text-emerald-700 hover:bg-white disabled:opacity-60"
+                      ? "border-emerald-200 bg-white/80 text-emerald-700 hover:bg-white disabled:opacity-60"
                       : "border-slate-200 bg-white text-slate-500 hover:bg-slate-50 disabled:opacity-60",
                   )}
                 >
@@ -185,8 +223,8 @@ export const ChatMessageBubble = forwardRef<HTMLDivElement, ChatMessageBubblePro
           </div>
           <div
             className={cn(
-              "flex items-center gap-2 text-[11px] text-slate-400",
-              isAgent && "justify-end",
+              "flex flex-wrap items-center gap-2 text-[11px] text-slate-400",
+              isAgent ? "justify-end" : "justify-start",
             )}
           >
             <span>{formatBubbleTime(message.createdAt)}</span>

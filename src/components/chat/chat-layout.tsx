@@ -1,7 +1,6 @@
 import { useAction } from "convex/react";
-import { Bell, CircleHelp, MessageSquare, PieChart, Plus, Settings, UserRound } from "lucide-react";
+import { Bell, CircleHelp, MessageSquare, PieChart, Settings, UserRound } from "lucide-react";
 import { useMemo, useState } from "react";
-import { Button } from "@/components/ui/button";
 import { api } from "../../../convex/_generated/api";
 import type { Id } from "../../../convex/_generated/dataModel";
 import { ChatSidebar } from "./chat-sidebar";
@@ -75,14 +74,11 @@ export function ChatLayout() {
     }
   };
 
-  const subtitle = activeContact ? `LINE ・ ${activeContact.lastMessageAt ?? "---"}` : "";
-
   return (
-    <div className="flex min-h-svh w-full bg-[#f5f7fb] text-slate-700">
+    <div className="flex h-svh w-full overflow-hidden bg-[#f5f7fb] text-slate-700">
       <NavigationRail />
-      <div className="flex flex-1 flex-col">
-        <OperatorHeader activeContactName={activeContact?.name} />
-        <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-1 min-h-0 flex-col">
+        <div className="flex flex-1 min-h-0 overflow-hidden">
           <ChatSidebar
             contacts={contactList}
             isLoading={isLoading}
@@ -90,7 +86,7 @@ export function ChatLayout() {
             onSelectContact={(contact) => setSelectedContactId(contact.id)}
           />
 
-          <section className="flex min-w-0 flex-1 flex-col border-r border-slate-200 bg-white">
+          <section className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden border-r border-slate-200 bg-white">
             {isEmptyState ? (
               <EmptyConversationState />
             ) : !activeContactId || !activeContact ? (
@@ -99,7 +95,6 @@ export function ChatLayout() {
               <>
                 <ConversationHeader
                   title={activeContact.name}
-                  subtitle={subtitle}
                   badgeLabel={
                     activeContact.lastMessageDirection
                       ? formatContactTag(activeContact.lastMessageDirection)
@@ -114,9 +109,11 @@ export function ChatLayout() {
                   isLoading={isLoadingMessages}
                   onRetryMessage={handleRetryMessage}
                   retryingMessageIds={retryingMessageIds}
+                  participantAvatar={activeContact.avatar}
+                  participantName={activeContact.name}
                 />
 
-                <footer className="border-t border-slate-200 bg-[#f7f8fb] px-8 py-5">
+                <footer className="shrink-0 border-t border-slate-200 bg-[#f7f8fb] px-8 py-5">
                   <MessageComposer
                     onSend={handleSendMessage}
                     disabled={!activeContactId}
@@ -174,7 +171,7 @@ function NavigationRail() {
   ] as const;
 
   return (
-    <aside className="hidden w-16 flex-col border-r border-slate-200 bg-white/95 pb-6 pt-4 text-slate-500 shadow-sm lg:flex">
+    <aside className="hidden h-full w-16 flex-col border-r border-slate-200 bg-white/95 pb-6 pt-4 text-slate-500 shadow-sm lg:flex">
       <div className="flex flex-col items-center gap-1 pb-6">
         <div className="rounded-full bg-emerald-500/10 px-3 py-1 text-[11px] font-semibold text-emerald-600">
           LINE
@@ -206,47 +203,5 @@ function NavigationRail() {
         </button>
       </div>
     </aside>
-  );
-}
-
-/**
- * @description 画面上部のアカウント情報・操作ボタン類をまとめたヘッダー。
- */
-function OperatorHeader({ activeContactName }: { activeContactName?: string }) {
-  return (
-    <header className="flex h-20 items-center justify-between border-b border-slate-200 bg-white/95 px-8">
-      <div>
-        <p className="text-xs font-medium uppercase tracking-[0.35em] text-slate-400">
-          LINE Official Account Manager
-        </p>
-        <div className="mt-1 flex items-center gap-3">
-          <h1 className="text-xl font-semibold text-slate-900">convex-example</h1>
-          <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-600">
-            稼働中
-          </span>
-          {activeContactName ? (
-            <span className="text-xs text-slate-500">選択中: {activeContactName}</span>
-          ) : null}
-        </div>
-      </div>
-      <div className="flex items-center gap-3 text-sm">
-        <button
-          type="button"
-          className="rounded-full border border-slate-200 px-4 py-1 text-slate-600 transition hover:bg-slate-50"
-        >
-          更新
-        </button>
-        <button
-          type="button"
-          className="rounded-full border border-slate-200 px-4 py-1 text-slate-600 transition hover:bg-slate-50"
-        >
-          対応方針
-        </button>
-        <Button className="rounded-full bg-emerald-500 px-5 py-2 text-white hover:bg-emerald-500/90">
-          <Plus className="mr-2 size-4" />
-          新規メッセージ
-        </Button>
-      </div>
-    </header>
   );
 }

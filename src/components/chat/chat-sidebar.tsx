@@ -19,8 +19,8 @@ export function ChatSidebar({
   onSelectContact,
 }: ChatSidebarProps) {
   return (
-    <aside className="hidden w-80 flex-col border-r border-slate-200 bg-[#f7f8fb] lg:flex">
-      <div className="border-b border-slate-200 px-4 py-3">
+    <aside className="hidden h-full w-80 min-h-0 flex-col overflow-hidden border-r border-slate-200 bg-[#f7f8fb] lg:flex">
+      <div className="shrink-0 border-b border-slate-200 px-4 py-3">
         <div className="flex items-center justify-between text-sm font-semibold text-slate-600">
           <span className="inline-flex items-center gap-2">
             <Menu className="size-4 text-slate-400" />
@@ -31,7 +31,7 @@ export function ChatSidebar({
         <p className="text-[11px] text-slate-400">LINE 公式アカウントの友だち一覧</p>
       </div>
 
-      <div className="px-4 py-4">
+      <div className="shrink-0 px-4 py-4">
         <div className="relative">
           <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
           <input

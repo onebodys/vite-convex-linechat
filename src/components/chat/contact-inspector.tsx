@@ -8,14 +8,14 @@ import type { Contact } from "./types";
 export function ContactInspector({ contact }: { contact: Contact | null }) {
   if (!contact) {
     return (
-      <aside className="hidden w-80 flex-col border-l border-slate-200 bg-white/70 px-5 py-6 text-sm text-slate-500 lg:flex">
+      <aside className="hidden h-full w-80 min-h-0 flex-col border-l border-slate-200 bg-white/70 px-5 py-6 text-sm text-slate-500 lg:flex">
         <p className="text-center text-xs">ユーザーを選択すると詳細が表示されます。</p>
       </aside>
     );
   }
 
   return (
-    <aside className="hidden w-80 flex-col border-l border-slate-200 bg-white px-5 py-6 text-sm text-slate-700 lg:flex">
+    <aside className="hidden h-full w-80 min-h-0 flex-col overflow-y-auto border-l border-slate-200 bg-white px-5 py-6 text-sm text-slate-700 lg:flex">
       <section className="flex flex-col items-center gap-3 pb-6">
         <div className="relative inline-flex">
           <img
