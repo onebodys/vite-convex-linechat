@@ -1,0 +1,11 @@
+- Install deps: `npm install`
+- Start dev servers (Convex + Vite): `npm run dev`
+- Run backend only: `npm run dev:backend`
+- Run frontend only: `npm run dev:frontend`
+- Type-check/build: `npm run build`
+- Preview production bundle: `npm run preview`
+- Lint: `npm run lint`
+- Format: `npm run format`
+- Detect unused code: `npm run knip`
+- Tests (when available): `npm run test` / `vitest`
+- Convex dashboard / maintenance: `npx convex dev`, `npx convex dashboard`, `npx convex run <function>`

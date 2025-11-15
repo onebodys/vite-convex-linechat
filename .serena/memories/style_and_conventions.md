@@ -1,0 +1,5 @@
+- TypeScript + React 19 with functional components; Tailwind CSS for styling, plus helper utilities in `src/lib/` (e.g., `clsx`, `cva`).
+- Project uses Biome for linting/formatting; stick to Biome defaults and TypeScript strictness enforced via `tsconfig`. Follow existing component patterns (hooks + UI modules under `src/components`, `src/hooks`).
+- Convex backend relies on schema definitions and actions/mutations under `convex/`; do not manually edit generated files under `convex/_generated/`.
+- Shared types reside in `shared/`; ensure any cross-runtime types go there.
+- LINE integrations use `@line/bot-sdk`; keep credentials sourced via `env.ts` (validated with Zod).

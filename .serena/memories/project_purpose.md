@@ -1,0 +1,4 @@
+- Vite Convex LINE Chat is a React 19 + Convex application that mimics a LINE-style agent console: operators triage incoming LINE webhook events, review contact timelines, and reply from a single workspace.
+- Convex hosts the real-time datastore and actions/mutations (line webhook processing, retry flows, rich media ingestion). The frontend (Vite + Tailwind) renders chat UI, sidebar, and line-specific controls.
+- Shared types live under `shared/`, Convex backend code under `convex/`, and React UI within `src/`. Utility code such as theming tokens is under `src/lib/`.
+- Environment config is validated through `env.ts` and `.env.local` for LINE credentials.
