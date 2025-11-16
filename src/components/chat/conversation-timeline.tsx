@@ -14,6 +14,11 @@ export function ConversationTimeline({
   retryingMessageIds,
   participantAvatar,
   participantName,
+  pinnedMessageIds,
+  onPinMessage,
+  onUnpinMessage,
+  scrollTargetMessageId,
+  onScrollTargetAcknowledged,
 }: {
   messages: TimelineEntry[];
   isLoading?: boolean;
@@ -21,9 +26,14 @@ export function ConversationTimeline({
   retryingMessageIds?: Set<Id<"messages">>;
   participantAvatar?: string;
   participantName?: string;
+  pinnedMessageIds?: Set<Id<"messages">>;
+  onPinMessage?: (entry: TimelineEntry) => void;
+  onUnpinMessage?: (messageId: Id<"messages">) => void;
+  scrollTargetMessageId?: Id<"messages"> | null;
+  onScrollTargetAcknowledged?: () => void;
 }) {
   const messageRefs = useRef(new Map<string, HTMLDivElement>());
-  const [highlightedLineMessageId, setHighlightedLineMessageId] = useState<string | null>(null);
+  const [highlightedMessageKey, setHighlightedMessageKey] = useState<string | null>(null);
 
   const timelineBlocks = useMemo(() => {
     const blocks: Array<
@@ -56,17 +66,19 @@ export function ConversationTimeline({
     return blocks;
   }, [messages]);
 
-  const registerMessageRef = useCallback((key: string | undefined, node: HTMLDivElement | null) => {
-    if (!key) {
-      return;
-    }
-
-    if (node) {
-      messageRefs.current.set(key, node);
-    } else {
-      messageRefs.current.delete(key);
-    }
-  }, []);
+  const registerMessageRef = useCallback(
+    (keyset: { messageId: string; lineMessageId?: string }, node: HTMLDivElement | null) => {
+      const keys = [keyset.messageId, keyset.lineMessageId].filter(Boolean) as string[];
+      keys.forEach((key) => {
+        if (node) {
+          messageRefs.current.set(key, node);
+        } else {
+          messageRefs.current.delete(key);
+        }
+      });
+    },
+    [],
+  );
 
   const handleQuoteNavigate = useCallback((lineMessageId: string) => {
     const target = messageRefs.current.get(lineMessageId);
@@ -75,20 +87,32 @@ export function ConversationTimeline({
     }
 
     target.scrollIntoView({ behavior: "smooth", block: "center" });
-    setHighlightedLineMessageId(lineMessageId);
+    setHighlightedMessageKey(lineMessageId);
   }, []);
 
   useEffect(() => {
-    if (!highlightedLineMessageId) {
+    if (!highlightedMessageKey) {
       return undefined;
     }
 
     const timeout = setTimeout(() => {
-      setHighlightedLineMessageId(null);
+      setHighlightedMessageKey(null);
     }, 1200);
 
     return () => clearTimeout(timeout);
-  }, [highlightedLineMessageId]);
+  }, [highlightedMessageKey]);
+
+  useEffect(() => {
+    if (!scrollTargetMessageId) {
+      return;
+    }
+    const target = messageRefs.current.get(scrollTargetMessageId);
+    if (target) {
+      target.scrollIntoView({ behavior: "smooth", block: "center" });
+      setHighlightedMessageKey(scrollTargetMessageId);
+      onScrollTargetAcknowledged?.();
+    }
+  }, [onScrollTargetAcknowledged, scrollTargetMessageId]);
 
   if (isLoading) {
     return (
@@ -116,19 +140,29 @@ export function ConversationTimeline({
           }
 
           const lineMessageId = block.entry.message.lineMessageId;
+          const messageKey = lineMessageId ?? block.entry.message._id;
           return (
             <ChatMessageBubble
               key={block.entry.message._id}
-              ref={(node) => registerMessageRef(lineMessageId, node)}
+              ref={(node) =>
+                registerMessageRef(
+                  {
+                    messageId: block.entry.message._id,
+                    lineMessageId,
+                  },
+                  node,
+                )
+              }
               entry={block.entry}
               onRetry={onRetryMessage}
               isRetrying={retryingMessageIds?.has(block.entry.message._id) ?? false}
-              isHighlighted={
-                lineMessageId !== undefined && highlightedLineMessageId === lineMessageId
-              }
+              isHighlighted={highlightedMessageKey === messageKey}
               onQuoteNavigate={handleQuoteNavigate}
               participantAvatar={participantAvatar}
               participantName={participantName}
+              isPinned={pinnedMessageIds?.has(block.entry.message._id) ?? false}
+              onPinMessage={() => onPinMessage?.(block.entry)}
+              onUnpinMessage={() => onUnpinMessage?.(block.entry.message._id)}
             />
           );
         })}

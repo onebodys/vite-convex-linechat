@@ -1,3 +1,4 @@
+import type { Id } from "../../../convex/_generated/dataModel";
 import type { TimelineEntry as SharedTimelineEntry } from "../../../shared/timeline-entry";
 
 /**
@@ -20,3 +21,10 @@ export type Contact = {
  * @description タイムライン表示用のメッセージと添付メディアのセット。sharedモジュールの定義を再利用する。
  */
 export type TimelineEntry = SharedTimelineEntry;
+
+export type PinnedMessage = {
+  messageId: Id<"messages">;
+  lineMessageId?: string;
+  previewText: string;
+  createdAt: number;
+};

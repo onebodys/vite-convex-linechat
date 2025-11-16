@@ -1,6 +1,6 @@
 import type { LineUserSummary } from "../../../shared/line-user";
 import { formatTimestamp } from "../../lib/datetime";
-import type { Contact } from "./types";
+import type { Contact, TimelineEntry } from "./types";
 
 export { formatTimestamp } from "../../lib/datetime";
 
@@ -58,6 +58,30 @@ export function formatContactTag(tag: string): string {
     default:
       return tag;
   }
+}
+
+/**
+ * @description タイムライン要素からピン留めプレビュー用のテキストを生成する。
+ */
+export function getTimelineEntryPreview(entry: TimelineEntry): string {
+  const { content } = entry.message;
+  if (content.kind === "text") {
+    return content.text.trim() || "(空メッセージ)";
+  }
+  if (content.kind === "media") {
+    const labelMap: Record<typeof content.mediaType, string> = {
+      image: "[画像]",
+      video: "[動画]",
+      audio: "[音声]",
+      file: "[ファイル]",
+      sticker: "[スタンプ]",
+    };
+    return labelMap[content.mediaType] ?? "[メディア]";
+  }
+  if (content.kind === "template") {
+    return content.altText ?? "[テンプレート]";
+  }
+  return "[メッセージ]";
 }
 
 /**

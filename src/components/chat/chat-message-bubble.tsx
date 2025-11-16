@@ -1,6 +1,12 @@
-import { BadgeCheck, CircleAlert, Clock } from "lucide-react";
+import { BadgeCheck, CircleAlert, Clock, MoreHorizontal } from "lucide-react";
 import { forwardRef } from "react";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import type { Id } from "../../../convex/_generated/dataModel";
 import type { TimelineEntry } from "./types";
@@ -20,6 +26,9 @@ type ChatMessageBubbleProps = {
   onQuoteNavigate?: (lineMessageId: string) => void;
   participantAvatar?: string;
   participantName?: string;
+  isPinned?: boolean;
+  onPinMessage?: (entry: TimelineEntry) => void;
+  onUnpinMessage?: (messageId: Id<"messages">) => void;
 };
 
 /**
@@ -35,6 +44,9 @@ export const ChatMessageBubble = forwardRef<HTMLDivElement, ChatMessageBubblePro
       onQuoteNavigate,
       participantAvatar,
       participantName,
+      isPinned = false,
+      onPinMessage,
+      onUnpinMessage,
     },
     ref,
   ) => {
@@ -161,6 +173,16 @@ export const ChatMessageBubble = forwardRef<HTMLDivElement, ChatMessageBubblePro
       ? "polygon(0% 0%, 100% 50%, 0% 100%)"
       : "polygon(100% 0%, 0% 50%, 100% 100%)";
 
+    const handlePinToggle = () => {
+      if (isPinned) {
+        onUnpinMessage?.(message._id);
+      } else {
+        onPinMessage?.(entry);
+      }
+    };
+
+    const pinActionLabel = isPinned ? "ピン留めを解除" : "ピン留め";
+
     return (
       <div ref={ref} className="flex items-start gap-3" data-side={isAgent ? "agent" : "customer"}>
         {!isAgent ? (
@@ -179,47 +201,78 @@ export const ChatMessageBubble = forwardRef<HTMLDivElement, ChatMessageBubblePro
           )}
           data-side={isAgent ? "agent" : "customer"}
         >
-          <div
-            className={cn(
-              "relative w-full overflow-visible rounded-3xl px-4 py-3 text-left text-sm leading-relaxed shadow-sm",
-              bubbleColors.text,
-              isAgent
-                ? "shadow-[0_4px_14px_rgba(16,185,129,0.15)]"
-                : "shadow-[0_6px_18px_rgba(15,23,42,0.08)]",
-              isHighlighted && "animate-bubble-shake ring-2 ring-emerald-200",
-            )}
-            style={{ backgroundColor: bubbleColors.background }}
-          >
-            <span
-              aria-hidden
+          <div className="group relative w-full">
+            <div
               className={cn(
-                "pointer-events-none absolute top-1/2 block h-4 w-3 -translate-y-1/2",
-                isAgent ? "-right-2" : "-left-2",
+                "relative w-full overflow-visible rounded-3xl px-4 py-3 text-left text-sm leading-relaxed shadow-sm",
+                bubbleColors.text,
+                isAgent
+                  ? "shadow-[0_4px_14px_rgba(16,185,129,0.15)]"
+                  : "shadow-[0_6px_18px_rgba(15,23,42,0.08)]",
+                isHighlighted && "animate-bubble-shake ring-2 ring-emerald-200",
               )}
-              style={{
-                clipPath: tailClipPath,
-                backgroundColor: bubbleColors.background,
-              }}
-            />
-            <div className="space-y-2">
-              {quotedPreview ? (
+              style={{ backgroundColor: bubbleColors.background }}
+            >
+              <span
+                aria-hidden
+                className={cn(
+                  "pointer-events-none absolute top-1/2 block h-4 w-3 -translate-y-1/2",
+                  isAgent ? "-right-2" : "-left-2",
+                )}
+                style={{
+                  clipPath: tailClipPath,
+                  backgroundColor: bubbleColors.background,
+                }}
+              />
+              <div className="space-y-2">
+                {quotedPreview ? (
+                  <button
+                    type="button"
+                    onClick={handleQuoteNavigate}
+                    disabled={!message.quotedMessage?.lineMessageId}
+                    className={cn(
+                      "w-full rounded-2xl border px-3 py-2 text-left text-xs transition",
+                      isAgent
+                        ? "border-emerald-200 bg-white/80 text-emerald-700 hover:bg-white disabled:opacity-60"
+                        : "border-slate-200 bg-white text-slate-500 hover:bg-slate-50 disabled:opacity-60",
+                    )}
+                  >
+                    <p className="font-medium">{quotedPreview.displayName}</p>
+                    <p className="line-clamp-2 whitespace-pre-line">{quotedPreview.text}</p>
+                  </button>
+                ) : null}
+                {renderContent()}
+              </div>
+            </div>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
                 <button
                   type="button"
-                  onClick={handleQuoteNavigate}
-                  disabled={!message.quotedMessage?.lineMessageId}
                   className={cn(
-                    "w-full rounded-2xl border px-3 py-2 text-left text-xs transition",
-                    isAgent
-                      ? "border-emerald-200 bg-white/80 text-emerald-700 hover:bg-white disabled:opacity-60"
-                      : "border-slate-200 bg-white text-slate-500 hover:bg-slate-50 disabled:opacity-60",
+                    "absolute hidden rounded-full bg-white/90 p-1 text-slate-400 shadow group-hover:flex group-focus-within:flex focus-visible:flex",
+                    isAgent ? "-left-2 bottom-1" : "-right-2 bottom-1",
                   )}
                 >
-                  <p className="font-medium">{quotedPreview.displayName}</p>
-                  <p className="line-clamp-2 whitespace-pre-line">{quotedPreview.text}</p>
+                  <MoreHorizontal className="size-4" />
                 </button>
-              ) : null}
-              {renderContent()}
-            </div>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align={isAgent ? "end" : "start"}>
+                <DropdownMenuItem className="text-slate-300" disabled>
+                  リプライ
+                </DropdownMenuItem>
+                <DropdownMenuItem className="text-slate-300" disabled>
+                  リンクをコピー
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onSelect={(event) => {
+                    event.preventDefault();
+                    handlePinToggle();
+                  }}
+                >
+                  {pinActionLabel}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
           <div
             className={cn(

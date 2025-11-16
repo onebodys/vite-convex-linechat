@@ -10,7 +10,8 @@ import { ConversationTimeline } from "./conversation-timeline";
 import { useLineContacts } from "./hooks/use-line-contacts";
 import { useLineMessages } from "./hooks/use-line-messages";
 import { MessageComposer } from "./message-composer";
-import { formatContactTag } from "./utils";
+import type { PinnedMessage, TimelineEntry } from "./types";
+import { formatContactTag, getTimelineEntryPreview } from "./utils";
 
 /**
  * @description LINE公式アカウントマネージャ風の 3 カラムUIを統括するレイアウトコンポーネント。
@@ -39,6 +40,18 @@ export function ChatLayout() {
   const resendTextMessage = useAction(api.line.actions.resendTextMessage);
   const [isSending, setIsSending] = useState(false);
   const [retryingMessageIds, setRetryingMessageIds] = useState<Set<Id<"messages">>>(new Set());
+  const [pinnedMessagesByContact, setPinnedMessagesByContact] = useState<
+    Record<string, PinnedMessage[]>
+  >({});
+  const [scrollTargetMessageId, setScrollTargetMessageId] = useState<Id<"messages"> | null>(null);
+
+  const activePinnedMessages = activeContactId
+    ? (pinnedMessagesByContact[activeContactId] ?? [])
+    : [];
+  const pinnedMessageIdSet = useMemo(
+    () => new Set(activePinnedMessages.map((pin) => pin.messageId)),
+    [activePinnedMessages],
+  );
 
   const handleSendMessage = async (text: string) => {
     if (!activeContactId || text.trim().length === 0) {
@@ -72,6 +85,40 @@ export function ChatLayout() {
         return next;
       });
     }
+  };
+
+  const handlePinMessage = (entry: TimelineEntry) => {
+    if (!activeContactId) {
+      return;
+    }
+    setPinnedMessagesByContact((prev) => {
+      const current = prev[activeContactId] ?? [];
+      if (current.some((pin) => pin.messageId === entry.message._id)) {
+        return prev;
+      }
+      const nextPin: PinnedMessage = {
+        messageId: entry.message._id,
+        lineMessageId: entry.message.lineMessageId,
+        previewText: getTimelineEntryPreview(entry),
+        createdAt: entry.message.createdAt,
+      };
+      return { ...prev, [activeContactId]: [...current, nextPin] };
+    });
+  };
+
+  const handleUnpinMessage = (messageId: Id<"messages">) => {
+    if (!activeContactId) {
+      return;
+    }
+    setPinnedMessagesByContact((prev) => {
+      const current = prev[activeContactId] ?? [];
+      const nextList = current.filter((pin) => pin.messageId !== messageId);
+      return { ...prev, [activeContactId]: nextList };
+    });
+  };
+
+  const handleSelectPinnedMessage = (messageId: Id<"messages">) => {
+    setScrollTargetMessageId(messageId);
   };
 
   return (
@@ -111,6 +158,11 @@ export function ChatLayout() {
                   retryingMessageIds={retryingMessageIds}
                   participantAvatar={activeContact.avatar}
                   participantName={activeContact.name}
+                  pinnedMessageIds={pinnedMessageIdSet}
+                  onPinMessage={handlePinMessage}
+                  onUnpinMessage={handleUnpinMessage}
+                  scrollTargetMessageId={scrollTargetMessageId}
+                  onScrollTargetAcknowledged={() => setScrollTargetMessageId(null)}
                 />
 
                 <footer className="shrink-0 border-t border-slate-200 bg-[#f7f8fb] px-8 py-5">
@@ -124,7 +176,12 @@ export function ChatLayout() {
             )}
           </section>
 
-          <ContactInspector contact={activeContact} />
+          <ContactInspector
+            contact={activeContact}
+            pinnedMessages={activePinnedMessages}
+            onSelectPinnedMessage={handleSelectPinnedMessage}
+            onUnpinMessage={handleUnpinMessage}
+          />
         </div>
       </div>
     </div>
