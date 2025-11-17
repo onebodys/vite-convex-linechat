@@ -7,3 +7,5 @@ pre-commit:
       stage_fixed: true
     knip:
       run: npm run knip -- --no-progress
+    typecheck:
+      run: npm run typecheck

@@ -13,7 +13,7 @@
 - `npm run build` performs a TypeScript project build (`tsc -b`) then produces the optimized Vite bundle.
 - `npm run preview` serves the last production build for smoke testing.
 - `npm run lint` checks style with Biome; `npm run format` applies fixes. `npm run knip` flags unused modules and exports.
-- After editing code, run `npm run lint` to catch style issues before committing.
+- After editing code, run `npm run lint` と `npm run typecheck` でスタイルと型チェックを通してください。
 - Install lefthook once via `npx lefthook install` so `pre-commit` runs `npx @biomejs/biome check --write` on staged files.
 
 ## Coding Style & Naming Conventions

@@ -9,6 +9,7 @@
     "dev:backend": "convex dev",
     "dev:frontend": "vite --open",
     "lint": "biome lint .",
+    "typecheck": "tsc --noEmit",
     "format": "biome format --write .",
     "preview": "vite preview",
     "knip": "knip",

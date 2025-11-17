@@ -222,9 +222,9 @@ function LoadingConversationState() {
 function NavigationRail() {
   const items = [
     { icon: MessageSquare, label: "チャット", active: true },
-    { icon: UserRound, label: "友だち" },
-    { icon: PieChart, label: "分析" },
-    { icon: Settings, label: "設定" },
+    { icon: UserRound, label: "友だち", active: false },
+    { icon: PieChart, label: "分析", active: false },
+    { icon: Settings, label: "設定", active: false },
   ] as const;
 
   return (
