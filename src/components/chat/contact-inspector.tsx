@@ -1,7 +1,10 @@
+import { useMutation } from "convex/react";
 import { Calendar, Plus, Tag, UserRound } from "lucide-react";
-import type { ComponentType, ReactNode } from "react";
+import { type ComponentType, type ReactNode, useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { api } from "../../../convex/_generated/api";
 import type { Id } from "../../../convex/_generated/dataModel";
+import { useLineNotes } from "./hooks/use-line-notes";
 import type { Contact, PinnedMessage } from "./types";
 
 /**
@@ -18,6 +21,15 @@ export function ContactInspector({
   onSelectPinnedMessage: (messageId: Id<"messages">) => void;
   onUnpinMessage: (messageId: Id<"messages">) => void;
 }) {
+  const contactId = contact?.id ?? null;
+  const { notes, isLoading: isLoadingNotes } = useLineNotes(contactId);
+  const createNoteMutation = useMutation(api.line.notes.create);
+  const removeNoteMutation = useMutation(api.line.notes.remove);
+  const [noteDraft, setNoteDraft] = useState("");
+  const [noteError, setNoteError] = useState<string | null>(null);
+  const [isSavingNote, setIsSavingNote] = useState(false);
+  const [removingNoteId, setRemovingNoteId] = useState<Id<"lineUserNotes"> | null>(null);
+
   if (!contact) {
     return (
       <aside className="hidden h-full w-80 min-h-0 flex-col border-l border-slate-200 bg-white/70 px-5 py-6 text-sm text-slate-500 lg:flex">
@@ -25,6 +37,43 @@ export function ContactInspector({
       </aside>
     );
   }
+
+  const handleCreateNote = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (isSavingNote) {
+      return;
+    }
+    const trimmed = noteDraft.trim();
+    if (!trimmed) {
+      setNoteError("ノートの内容を入力してください。");
+      return;
+    }
+    if (notes.length >= 20) {
+      setNoteError("ノートは20件までです。");
+      return;
+    }
+    setIsSavingNote(true);
+    setNoteError(null);
+    try {
+      await createNoteMutation({ lineUserId: contact.id, body: trimmed });
+      setNoteDraft("");
+    } catch (error) {
+      setNoteError(error instanceof Error ? error.message : "ノートの保存に失敗しました。");
+    } finally {
+      setIsSavingNote(false);
+    }
+  };
+
+  const handleRemoveNote = async (noteId: Id<"lineUserNotes">) => {
+    setRemovingNoteId(noteId);
+    try {
+      await removeNoteMutation({ noteId });
+    } catch (error) {
+      setNoteError(error instanceof Error ? error.message : "ノートの削除に失敗しました。");
+    } finally {
+      setRemovingNoteId(null);
+    }
+  };
 
   return (
     <aside className="hidden h-full w-80 min-h-0 flex-col overflow-y-auto border-l border-slate-200 bg-white px-5 py-6 text-sm text-slate-700 lg:flex">
@@ -83,19 +132,73 @@ export function ContactInspector({
 
         <TabsContent value="notes">
           <SectionCard title="ノート">
-            <div className="flex items-center justify-between text-xs text-slate-500">
-              <span>1/1</span>
-              <button type="button" className="inline-flex items-center gap-1 text-emerald-600">
-                <Plus className="size-3" />
-                ノートを追加
-              </button>
-            </div>
-            <div className="mt-3 rounded-2xl border border-slate-200 bg-slate-50/60 p-3 text-xs leading-relaxed text-slate-600">
-              <p className="font-semibold">ノートその1</p>
-              <p className="mt-1 text-slate-500">2025/11/04 18:19 ・ くまがい</p>
-              <p className="mt-2">
-                顧客メモをここに追加します。正式リリース時は Convex のノートデータと連携予定です。
-              </p>
+            <form className="space-y-3" onSubmit={handleCreateNote}>
+              <textarea
+                className="w-full resize-none rounded-2xl border border-slate-200 bg-white/80 px-3 py-2 text-sm text-slate-700 outline-none transition focus:border-emerald-400"
+                rows={3}
+                placeholder="ここにメモを入力"
+                maxLength={300}
+                value={noteDraft}
+                onChange={(event) => {
+                  setNoteDraft(event.target.value);
+                  if (noteError) {
+                    setNoteError(null);
+                  }
+                }}
+                disabled={isSavingNote || notes.length >= 20}
+              />
+              <div className="flex items-center justify-between text-[11px] text-slate-400">
+                <span>{noteDraft.length}/300 文字</span>
+                <span>
+                  {notes.length}/20 件{notes.length >= 20 ? " (上限)" : ""}
+                </span>
+              </div>
+              {noteError ? <p className="text-xs text-rose-500">{noteError}</p> : null}
+              <div className="flex justify-end">
+                <button
+                  type="submit"
+                  className="inline-flex items-center gap-1 rounded-full bg-emerald-500 px-4 py-1.5 text-xs font-semibold text-white transition hover:bg-emerald-500/90 disabled:cursor-not-allowed disabled:opacity-60"
+                  disabled={isSavingNote || noteDraft.trim().length === 0 || notes.length >= 20}
+                >
+                  <Plus className="size-3" />
+                  ノートを追加
+                </button>
+              </div>
+            </form>
+            <div className="mt-4 space-y-3">
+              {isLoadingNotes ? (
+                <p className="text-xs text-slate-500">ノートを読み込み中です…</p>
+              ) : notes.length === 0 ? (
+                <p className="text-xs text-slate-500">まだノートは登録されていません。</p>
+              ) : (
+                notes.map((note) => (
+                  <div
+                    key={note._id}
+                    className="rounded-2xl border border-slate-200 bg-white/80 p-3 text-sm leading-relaxed text-slate-700 shadow-sm"
+                  >
+                    <p className="whitespace-pre-line">{note.body}</p>
+                    <div className="mt-2 flex items-center justify-between text-[11px] text-slate-400">
+                      <span>
+                        {new Date(note.createdAt).toLocaleString("ja-JP", {
+                          month: "numeric",
+                          day: "numeric",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                          hour12: false,
+                        })}
+                      </span>
+                      <button
+                        type="button"
+                        className="text-rose-500"
+                        onClick={() => handleRemoveNote(note._id)}
+                        disabled={removingNoteId === note._id}
+                      >
+                        {removingNoteId === note._id ? "削除中…" : "削除"}
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           </SectionCard>
         </TabsContent>

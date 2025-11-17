@@ -23,6 +23,7 @@ import type * as line_message_delivery from "../line/message_delivery.js";
 import type * as line_message_helpers from "../line/message_helpers.js";
 import type * as line_messages from "../line/messages.js";
 import type * as line_messaging_client from "../line/messaging_client.js";
+import type * as line_notes from "../line/notes.js";
 import type * as line_tasks from "../line/tasks.js";
 import type * as line_users from "../line/users.js";
 import type * as line_webhook from "../line/webhook.js";
@@ -48,6 +49,7 @@ declare const fullApi: ApiFromModules<{
   "line/message_helpers": typeof line_message_helpers;
   "line/messages": typeof line_messages;
   "line/messaging_client": typeof line_messaging_client;
+  "line/notes": typeof line_notes;
   "line/tasks": typeof line_tasks;
   "line/users": typeof line_users;
   "line/webhook": typeof line_webhook;

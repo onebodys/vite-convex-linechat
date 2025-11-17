@@ -109,4 +109,10 @@ export default defineSchema({
     .index("byLineUserId", ["lineUserId"])
     .index("byRelationshipStatus", ["relationshipStatus"])
     .index("byUpdatedAt", ["updatedAt"]),
+  lineUserNotes: defineTable({
+    lineUserId: v.string(),
+    body: v.string(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  }).index("byLineUserIdCreatedAt", ["lineUserId", "createdAt"]),
 });
